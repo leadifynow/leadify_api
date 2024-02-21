@@ -14,6 +14,24 @@ public class Booked {
     private String timezone;
     private Integer interested_id;
     private Integer company_id;
+    private String workspace_id;
+    private String event_name;
+
+    public String getWorkspace_id() {
+        return workspace_id;
+    }
+
+    public void setWorkspace_id(String workspace_id) {
+        this.workspace_id = workspace_id;
+    }
+
+    public String getEvent_name() {
+        return event_name;
+    }
+
+    public void setEvent_name(String event_name) {
+        this.event_name = event_name;
+    }
 
     public Integer getCompany_id() {
         return company_id;

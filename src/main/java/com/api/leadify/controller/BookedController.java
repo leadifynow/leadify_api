@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @CrossOrigin
@@ -25,9 +26,9 @@ public class BookedController {
     public ApiResponse<Void> createBooked(@PathVariable("company_id") int companyId, @RequestBody Booked booked) {
         return bookedService.createBooked(companyId, booked);
     }
-    @GetMapping("/getByCompany/{companyId}")
-    public ApiResponse<List<Booked>> getAllBookedByCompanyId(@PathVariable("companyId") int companyId) {
-        return bookedService.getAllBookedByCompanyId(companyId);
+    @GetMapping("/getByCompany/{companyId}/{workspace_id}")
+    public ApiResponse<List<Booked>> getAllBookedByCompanyId(@PathVariable("companyId") int companyId, @PathVariable("workspace_id") String workspace_id) {
+        return bookedService.getAllBookedByCompanyId(companyId, workspace_id);
     }
     @GetMapping("/search")
     public ApiResponse<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId) {

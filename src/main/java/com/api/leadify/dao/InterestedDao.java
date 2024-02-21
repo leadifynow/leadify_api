@@ -70,16 +70,17 @@ public class InterestedDao {
             Stage mainStage = new Stage();
             mainStage.setWorkspace_id(workspaceId);
             mainStage.setName("Main");
+            mainStage.setFollowup(3);
             ApiResponse<Integer> createMainStageResponse = stageDao.createStage(mainStage);
 
-            if (createMainStageResponse.getCode() == 201) {
-                // Set the Main stage ID as the default stage_id for the Interested entity
-                interested.setStage_id(createMainStageResponse.getData());
-            } else {
-                // Handle error if stage creation fails
-                System.out.println("Error creating Main stage: " + createMainStageResponse.getMessage());
-                return; // Exit method
-            }
+//            if (createMainStageResponse.getCode() == 201) {
+//                // Set the Main stage ID as the default stage_id for the Interested entity
+//                interested.setStage_id(createMainStageResponse.getData());
+//            } else {
+//                // Handle error if stage creation fails
+//                System.out.println("Error creating Main stage: " + createMainStageResponse.getMessage());
+//                return; // Exit method
+//            }
 
             // Check if "Not a Fit" stage exists
             ApiResponse<Integer> notFitStageIdResponse = stageDao.getStageIdByName(workspaceId, "Not a Fit");
@@ -88,6 +89,7 @@ public class InterestedDao {
                 Stage notFitStage = new Stage();
                 notFitStage.setWorkspace_id(workspaceId);
                 notFitStage.setName("Not a Fit");
+                notFitStage.setFollowup(0);
                 ApiResponse<Integer> createNotFitStageResponse = stageDao.createStage(notFitStage);
 
                 if (createNotFitStageResponse.getCode() != 201) {
@@ -151,7 +153,8 @@ public class InterestedDao {
                 interested.getNumber_of_employees(),
                 interested.getCompanyName(),
                 interested.getLinkedin_url(),
-                interested.getStage_id() // Pass the stage_id value to the query
+                null
+                // interested.getStage_id() // Pass the stage_id value to the query
         );
     }
     public void updateStage(Integer stageId, Integer interestedId) {
@@ -176,7 +179,9 @@ public class InterestedDao {
                 // Check if the next_update is today's date or if it's null and the stage is "Not a Fit"
                 if (interested.getNext_update() == null || isNextUpdateToday(interested.getNext_update())) {
                     int notAFitStageId = getStageIdForName("Not a Fit", workspaceId);
-                    if (interested.getStage_id() != notAFitStageId) {
+
+                    // Check if interested.getStage_id() is not null before comparing
+                    if (interested.getStage_id() == null || interested.getStage_id() != notAFitStageId) {
                         // Add the interested item to the valid list
                         validInterestedList.add(interested);
                     }
@@ -189,6 +194,7 @@ public class InterestedDao {
                 return new ApiResponse<>("Interested items retrieved successfully", validInterestedList, 200);
             }
         } catch (Exception e) {
+            e.printStackTrace();
             // Log or handle the exception
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
@@ -263,6 +269,7 @@ public class InterestedDao {
     public ApiResponse<String> updateInterestedNotes(int interestedId, String newNotes) {
         try {
             // Check if the interested exists
+            newNotes = (Objects.equals(newNotes, "null")) ? "" : newNotes;
             String checkInterestedSql = "SELECT COUNT(*) FROM interested WHERE id = ?";
             int count = jdbcTemplate.queryForObject(checkInterestedSql, Integer.class, interestedId);
             if (count == 0) {

@@ -1,0 +1,2 @@
+ALTER TABLE booked
+ADD COLUMN event_name VARCHAR(255) NULL;

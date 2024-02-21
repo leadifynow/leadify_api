@@ -17,6 +17,7 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @Repository
 public class BookedDao {
@@ -39,6 +40,46 @@ public class BookedDao {
             String textReminderNumber = payloadNode.get("text_reminder_number").asText();
             String timezone = payloadNode.get("timezone").asText();
             Integer company_id = companyId;
+            JsonNode forEvent = payloadNode.get("scheduled_event");
+            String event_name = forEvent.get("name").asText();
+
+            UUID workspaceId = null;
+
+            if (event_name.equals("Mindful Agency - Initial Consultation")
+                    || event_name.equals("Mindful Agency - Strategy Consultation")
+                    || event_name.equals("Mindful Agency - Premium Consultation")
+                    || event_name.equals("Mindful Agency - Elite Consultation")) {
+                String sql = "SELECT id FROM workspace WHERE name = ?";
+                try {
+                    // Execute the SELECT query and retrieve the ID
+                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Natalie");
+                } catch (EmptyResultDataAccessException e) {
+                    // Handle case when no workspace with the given name is found
+                    System.out.println("No workspace found for the given name.");
+                } catch (DataAccessException e) {
+                    // Handle other data access exceptions
+                    e.printStackTrace();
+                }
+            }
+
+            if (event_name.equals("Mindful Agency - Initial PR Consultation")
+                    || event_name.equals("Mindful Agency - Strategy PR Consultation")
+                    || event_name.equals("Mindful Agency - Premium PR Consultation")
+                    || event_name.equals("Mindful Agency - Elite PR Consultation")) {
+                String sql = "SELECT id FROM workspace WHERE name = ?";
+                try {
+                    // Execute the SELECT query and retrieve the ID
+                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Lauren");
+                } catch (EmptyResultDataAccessException e) {
+                    // Handle case when no workspace with the given name is found
+                    System.out.println("No workspace found for the given name.");
+                } catch (DataAccessException e) {
+                    // Handle other data access exceptions
+                    e.printStackTrace();
+                }
+            }
+
+            System.out.println(workspaceId);
 
             // Check if the email exists in the interested table
             String interestedIdQuery = "SELECT id FROM interested WHERE lead_email = ?";
@@ -52,10 +93,13 @@ public class BookedDao {
             }
 
             // Inserting basic booking information into the database
-            String sql = "INSERT INTO booked (email, first_name, last_name, name, text_reminder_number, timezone, interested_id, company_id) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO booked (email, first_name, last_name, name, text_reminder_number, timezone, interested_id, company_id, workspace_id, event_name) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
             Integer finalInterestedId = interestedId;
+            System.out.println(workspaceId);
+            UUID finalWorkspaceId = workspaceId;
+            System.out.println(finalWorkspaceId);
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
                 ps.setString(1, email);
@@ -70,6 +114,12 @@ public class BookedDao {
                     ps.setNull(7, Types.INTEGER);
                 }
                 ps.setInt(8, company_id);
+                if (finalWorkspaceId != null) {
+                    ps.setString(9, finalWorkspaceId.toString());
+                } else {
+                    ps.setNull(9, Types.INTEGER);
+                }
+                ps.setString(10, event_name);
                 return ps;
             }, keyHolder);
 
@@ -96,17 +146,18 @@ public class BookedDao {
             return new ApiResponse<>("Error creating booked", null, 500);
         }
     }
-    public ApiResponse<List<Booked>> getAllBookedByCompanyId(int companyId) {
+    public ApiResponse<List<Booked>> getAllBookedByCompanyId(int companyId, String workspaceId) {
+        System.out.println(workspaceId);
         try {
-            String sql = "SELECT * FROM booked WHERE company_id = ?";
-            List<Booked> bookedList = jdbcTemplate.query(sql, new Object[]{companyId}, new BeanPropertyRowMapper<>(Booked.class));
+            String sql = "SELECT * FROM booked WHERE company_id = ? AND workspace_id = ? OR workspace_id IS NULL";
+            List<Booked> bookedList = jdbcTemplate.query(sql, new Object[]{companyId, workspaceId.toString()}, new BeanPropertyRowMapper<>(Booked.class));
             if (bookedList.isEmpty()) {
-                return new ApiResponse<>("No bookings found for the given company ID", null, 404);
+                return new ApiResponse<>("No bookings found for the given company ID and workspace ID", null, 404);
             } else {
                 return new ApiResponse<>("Bookings retrieved successfully", bookedList, 200);
             }
         } catch (DataAccessException e) {
-            String errorMessage = "Error retrieving bookings by company ID. Details: " + e.getLocalizedMessage();
+            String errorMessage = "Error retrieving bookings by company ID and workspace ID. Details: " + e.getLocalizedMessage();
             e.printStackTrace();
             return new ApiResponse<>(errorMessage, null, 500);
         }

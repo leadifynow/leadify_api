@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class BookedService {
@@ -21,8 +22,8 @@ public class BookedService {
     public ApiResponse<Void> createBooked(int companyId, Booked booked) {
         return bookedDao.createBooked(booked, companyId);
     }
-    public ApiResponse<List<Booked>> getAllBookedByCompanyId(int companyId) {
-        return bookedDao.getAllBookedByCompanyId(companyId);
+    public ApiResponse<List<Booked>> getAllBookedByCompanyId(int companyId, String workspaceId) {
+        return bookedDao.getAllBookedByCompanyId(companyId, workspaceId);
     }
     public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId) {
         return bookedDao.searchBookedRecords(searchTerm, companyId);
