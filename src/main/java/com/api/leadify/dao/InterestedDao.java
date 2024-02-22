@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.Collections;
+import java.util.Comparator;
 
 @Repository
 public class InterestedDao {
@@ -167,26 +169,33 @@ public class InterestedDao {
     }
     public ApiResponse<List<Interested>> getAllByWorkspaceId(UUID workspaceId) {
         try {
-            // Check if there are interested items with the given workspace ID where booked is 0 and manager is null
-            String checkSql = "SELECT * FROM interested WHERE workspace = ? AND booked = 0 AND manager IS NULL";
-            List<Interested> interestedList = jdbcTemplate.query(checkSql, new BeanPropertyRowMapper<>(Interested.class), workspaceId.toString());
+            // Query to retrieve interested items based on workspace ID, where booked is 0 and manager is null
+            String query = "SELECT * FROM interested WHERE workspace = ? AND booked = 0 AND manager IS NULL";
+
+            // Execute the query and retrieve the interested items
+            List<Interested> interestedList = jdbcTemplate.query(query, new BeanPropertyRowMapper<>(Interested.class), workspaceId.toString());
 
             // List to hold valid interested items
             List<Interested> validInterestedList = new ArrayList<>();
 
             // Iterate over the interested items to apply additional validations
             for (Interested interested : interestedList) {
-                // Check if the next_update is today's date or if it's null and the stage is "Not a Fit"
-                if (interested.getNext_update() == null || isNextUpdateToday(interested.getNext_update())) {
-                    int notAFitStageId = getStageIdForName("Not a Fit", workspaceId);
+                // Check if the next_update is today's date, null, or in the past, and the stage is not "Not a Fit"
+                if (interested.getNext_update() == null
+                        || isNextUpdateToday(interested.getNext_update())
+                        || isNextUpdateInThePast(interested.getNext_update())) {
 
                     // Check if interested.getStage_id() is not null before comparing
+                    int notAFitStageId = getStageIdForName("Not a Fit", workspaceId);
                     if (interested.getStage_id() == null || interested.getStage_id() != notAFitStageId) {
                         // Add the interested item to the valid list
                         validInterestedList.add(interested);
                     }
                 }
             }
+
+            // Sort the valid interested items by the most recent next update date
+            Collections.sort(validInterestedList, Comparator.comparing(Interested::getNext_update, Comparator.nullsLast(Comparator.reverseOrder())));
 
             if (validInterestedList.isEmpty()) {
                 return new ApiResponse<>("No interested items found for the given workspace ID or they are already booked or managed", null, 404);
@@ -199,6 +208,15 @@ public class InterestedDao {
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
+
+    private boolean isNextUpdateInThePast(Timestamp nextUpdateTimestamp) {
+        if (nextUpdateTimestamp == null) {
+            return false; // Treat null as future date
+        }
+        LocalDate nextUpdateDate = nextUpdateTimestamp.toLocalDateTime().toLocalDate();
+        return nextUpdateDate.isBefore(LocalDate.now());
+    }
+
     private boolean isNextUpdateToday(Timestamp nextUpdateTimestamp) {
         if (nextUpdateTimestamp == null) {
             return true; // Treat null as today
@@ -206,6 +224,7 @@ public class InterestedDao {
         LocalDate nextUpdateDate = nextUpdateTimestamp.toLocalDateTime().toLocalDate();
         return nextUpdateDate.isEqual(LocalDate.now());
     }
+
     private int getStageIdForName(String stageName, UUID workspaceId) {
         try {
             String stageIdSql = "SELECT id FROM stage WHERE workspace_id = ? AND name = ?";
