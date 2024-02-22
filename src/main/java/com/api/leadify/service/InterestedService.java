@@ -44,10 +44,9 @@ public class InterestedService {
         return interestedDao.searchInterestedRecords(searchTerm, workspaceId);
     }
     public ApiResponse<String> updateNextUpdateDate(Integer interestedId, LocalDate nextUpdateDate) {
-        // Validate the nextUpdateDate if necessary
-        // For example, ensure it's not in the past
-
-        // Call the dao method to update the next update date
         return interestedDao.updateNextUpdateDate(interestedId, nextUpdateDate);
+    }
+    public ApiResponse<Void> createManualInterested(Interested interested) {
+        return interestedDao.createManualInterested(interested);
     }
 }

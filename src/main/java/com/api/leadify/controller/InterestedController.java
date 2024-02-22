@@ -59,4 +59,8 @@ public class InterestedController {
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate nextUpdateDate) {
         return interestedService.updateNextUpdateDate(interestedId, nextUpdateDate);
     }
+    @PostMapping("/createManual")
+    public ApiResponse<Void> createManualInterested(@RequestBody Interested interested) {
+        return  interestedService.createManualInterested(interested);
+    }
 }

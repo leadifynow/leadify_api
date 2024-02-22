@@ -199,7 +199,6 @@ public class InterestedDao {
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
-
     private boolean isNextUpdateToday(Timestamp nextUpdateTimestamp) {
         if (nextUpdateTimestamp == null) {
             return true; // Treat null as today
@@ -207,7 +206,6 @@ public class InterestedDao {
         LocalDate nextUpdateDate = nextUpdateTimestamp.toLocalDateTime().toLocalDate();
         return nextUpdateDate.isEqual(LocalDate.now());
     }
-
     private int getStageIdForName(String stageName, UUID workspaceId) {
         try {
             String stageIdSql = "SELECT id FROM stage WHERE workspace_id = ? AND name = ?";
@@ -318,4 +316,40 @@ public class InterestedDao {
             return new ApiResponse<>("Error updating next update date for interested item", null, 500);
         }
     }
+    public ApiResponse<Void> createManualInterested(Interested interested) {
+        try {
+            String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
+            int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, interested.getLead_email(), interested.getWorkspace().toString());
+
+            if (emailCount > 0) {
+                return new ApiResponse<>("Lead already exists", null, 500);
+            }
+
+            String sql = "INSERT INTO interested (campaign_name, event_type, workspace, campaign_id, lead_email, email, lastName, firstName, companyName, stage_id, notes, booked, manager, next_update) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            jdbcTemplate.update(sql,
+                    interested.getCampaign_name(),
+                    interested.getEvent_type(),
+                    interested.getWorkspace().toString(),
+                    interested.getCampaign_id().toString(),
+                    interested.getLead_email(),
+                    interested.getLead_email(),
+                    interested.getLastName(),
+                    interested.getFirstName(),
+                    interested.getCompanyName(),
+                    null, // Assuming stage_id is an Integer
+                    interested.getNotes(),
+                    false,
+                    null,
+                    null
+            );
+            return new ApiResponse<>("Lead created successfully", null, 201);
+        } catch (DataAccessException e) {
+            String errorMessage = "Error creating Lead: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
+            e.printStackTrace();
+            return new ApiResponse<>(errorMessage, null, 500);
+        }
+    }
+
 }
