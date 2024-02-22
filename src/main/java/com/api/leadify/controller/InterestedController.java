@@ -63,4 +63,8 @@ public class InterestedController {
     public ApiResponse<Void> createManualInterested(@RequestBody Interested interested) {
         return  interestedService.createManualInterested(interested);
     }
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteInterestedById(@PathVariable Integer id) {
+        return interestedService.deleteInterestedById(id);
+    }
 }

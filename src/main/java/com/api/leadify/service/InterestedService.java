@@ -49,4 +49,14 @@ public class InterestedService {
     public ApiResponse<Void> createManualInterested(Interested interested) {
         return interestedDao.createManualInterested(interested);
     }
+    public ApiResponse<Void> deleteInterestedById(Integer id) {
+        try {
+            return interestedDao.deleteById(id);
+        } catch (Exception e) {
+            // Handle any unexpected exceptions
+            String errorMessage = "Error deleting interested record: " + e.getMessage();
+            e.printStackTrace();
+            return new ApiResponse<>(errorMessage, null, 500);
+        }
+    }
 }

@@ -351,5 +351,24 @@ public class InterestedDao {
             return new ApiResponse<>(errorMessage, null, 500);
         }
     }
+    public ApiResponse<Void> deleteById(Integer id) {
+        try {
+            String sql = "DELETE FROM interested WHERE id = ?";
+            int rowsAffected = jdbcTemplate.update(sql, id);
+            if (rowsAffected > 0) {
+                return new ApiResponse<>("Record deleted successfully", null, 200);
+            } else {
+                return new ApiResponse<>("No record found with the given ID", null, 404);
+            }
+        } catch (EmptyResultDataAccessException e) {
+            // Handle case where no record is found with the given ID
+            return new ApiResponse<>("No record found with the given ID", null, 404);
+        } catch (DataAccessException e) {
+            // Handle other database-related exceptions
+            String errorMessage = "Error deleting record: " + e.getLocalizedMessage();
+            e.printStackTrace();
+            return new ApiResponse<>(errorMessage, null, 500);
+        }
+    }
 
 }
