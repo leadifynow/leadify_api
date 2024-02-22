@@ -48,6 +48,15 @@ public class Interested {
     private Timestamp created_at;
     private Integer manager;
     private Timestamp next_update;
+    private String workspaceName;
+
+    public String getWorkspaceName() {
+        return workspaceName;
+    }
+
+    public void setWorkspaceName(String workspaceName) {
+        this.workspaceName = workspaceName;
+    }
 
     public Timestamp getNext_update() {
         return next_update;

@@ -195,7 +195,7 @@ public class InterestedDao {
             }
 
             // Sort the valid interested items by the most recent next update date
-            Collections.sort(validInterestedList, Comparator.comparing(Interested::getNext_update, Comparator.nullsLast(Comparator.reverseOrder())));
+            Collections.sort(validInterestedList, Comparator.comparing(Interested::getCreated_at, Comparator.nullsLast(Comparator.reverseOrder())));
 
             if (validInterestedList.isEmpty()) {
                 return new ApiResponse<>("No interested items found for the given workspace ID or they are already booked or managed", null, 404);
@@ -208,7 +208,6 @@ public class InterestedDao {
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
-
     private boolean isNextUpdateInThePast(Timestamp nextUpdateTimestamp) {
         if (nextUpdateTimestamp == null) {
             return false; // Treat null as future date
@@ -216,7 +215,6 @@ public class InterestedDao {
         LocalDate nextUpdateDate = nextUpdateTimestamp.toLocalDateTime().toLocalDate();
         return nextUpdateDate.isBefore(LocalDate.now());
     }
-
     private boolean isNextUpdateToday(Timestamp nextUpdateTimestamp) {
         if (nextUpdateTimestamp == null) {
             return true; // Treat null as today
@@ -224,7 +222,6 @@ public class InterestedDao {
         LocalDate nextUpdateDate = nextUpdateTimestamp.toLocalDateTime().toLocalDate();
         return nextUpdateDate.isEqual(LocalDate.now());
     }
-
     private int getStageIdForName(String stageName, UUID workspaceId) {
         try {
             String stageIdSql = "SELECT id FROM stage WHERE workspace_id = ? AND name = ?";
@@ -387,6 +384,27 @@ public class InterestedDao {
             String errorMessage = "Error deleting record: " + e.getLocalizedMessage();
             e.printStackTrace();
             return new ApiResponse<>(errorMessage, null, 500);
+        }
+    }
+    public ApiResponse<List<Interested>> getAllByManagerAndBookedIsZero(Integer manager) {
+        try {
+            String query = "SELECT i.*, w.name AS workspaceName " +
+                    "FROM interested i " +
+                    "JOIN workspace w ON i.workspace = w.id " +
+                    "WHERE i.manager = ? AND i.booked = 0 " +
+                    "ORDER BY i.created_at DESC";
+
+            List<Interested> interestedList = jdbcTemplate.query(query, new BeanPropertyRowMapper<>(Interested.class), manager);
+
+            if (interestedList.isEmpty()) {
+                return new ApiResponse<>("No interested items found for the given manager where booked is 0", null, 404);
+            } else {
+                return new ApiResponse<>("Interested items retrieved successfully", interestedList, 200);
+            }
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+            // Log or handle the exception
+            return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
 

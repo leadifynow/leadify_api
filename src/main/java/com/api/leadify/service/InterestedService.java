@@ -59,4 +59,7 @@ public class InterestedService {
             return new ApiResponse<>(errorMessage, null, 500);
         }
     }
+    public ApiResponse<List<Interested>> getAllByManagerAndBookedIsZero(Integer manager) {
+        return interestedDao.getAllByManagerAndBookedIsZero(manager);
+    }
 }

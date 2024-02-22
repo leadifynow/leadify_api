@@ -67,4 +67,8 @@ public class InterestedController {
     public ApiResponse<Void> deleteInterestedById(@PathVariable Integer id) {
         return interestedService.deleteInterestedById(id);
     }
+    @GetMapping("/manager/{manager}")
+    public ApiResponse<List<Interested>> getAllByManagerAndBookedIsZero(@PathVariable Integer manager) {
+        return interestedService.getAllByManagerAndBookedIsZero(manager);
+    }
 }
