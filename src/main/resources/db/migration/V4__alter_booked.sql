@@ -1,0 +1,6 @@
+ALTER TABLE booked
+    ADD COLUMN business VARCHAR(255) NULL,
+    ADD COLUMN website VARCHAR(255) NULL,
+    ADD COLUMN meeting_date TIMESTAMP NULL,
+    ADD COLUMN publicist VARCHAR(255) NULL,
+    ADD COLUMN referral VARCHAR(255) NULL;

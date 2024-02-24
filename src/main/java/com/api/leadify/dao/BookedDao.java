@@ -15,6 +15,8 @@ import org.springframework.stereotype.Repository;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Types;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -42,6 +44,13 @@ public class BookedDao {
             Integer company_id = companyId;
             JsonNode forEvent = payloadNode.get("scheduled_event");
             String event_name = forEvent.get("name").asText();
+            String meetingDateTimeStr = forEvent.get("start_time").asText();
+            LocalDateTime meetingDateTime = LocalDateTime.parse(meetingDateTimeStr, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            String formattedMeetingDateTime = meetingDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            JsonNode event_members = forEvent.get("event_memberships");
+            String publicist = null;
+            JsonNode firstMember = event_members.get(0);  // Get the object at the first position
+            publicist = firstMember.get("user_name").asText();
 
             UUID workspaceId = null;
 
@@ -60,9 +69,7 @@ public class BookedDao {
                     // Handle other data access exceptions
                     e.printStackTrace();
                 }
-            }
-
-            if (event_name.equals("Mindful Agency - Initial PR Consultation")
+            } else if (event_name.equals("Mindful Agency - Initial PR Consultation")
                     || event_name.equals("Mindful Agency - Strategy PR Consultation")
                     || event_name.equals("Mindful Agency - Premium PR Consultation")
                     || event_name.equals("Mindful Agency - Elite PR Consultation")) {
@@ -77,6 +84,9 @@ public class BookedDao {
                     // Handle other data access exceptions
                     e.printStackTrace();
                 }
+            } else {
+                // If the event name doesn't match any of the specified conditions, return an appropriate response
+                return new ApiResponse<>("Invalid event name", null, 400);
             }
 
             System.out.println(workspaceId);
@@ -93,13 +103,14 @@ public class BookedDao {
             }
 
             // Inserting basic booking information into the database
-            String sql = "INSERT INTO booked (email, first_name, last_name, name, text_reminder_number, timezone, interested_id, company_id, workspace_id, event_name) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO booked (email, first_name, last_name, name, text_reminder_number, timezone, interested_id, company_id, workspace_id, event_name, publicist, meeting_date) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
             Integer finalInterestedId = interestedId;
             System.out.println(workspaceId);
             UUID finalWorkspaceId = workspaceId;
             System.out.println(finalWorkspaceId);
+            String finalPublicist = publicist;
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
                 ps.setString(1, email);
@@ -120,6 +131,8 @@ public class BookedDao {
                     ps.setNull(9, Types.INTEGER);
                 }
                 ps.setString(10, event_name);
+                ps.setString(11, finalPublicist);
+                ps.setString(12, formattedMeetingDateTime);
                 return ps;
             }, keyHolder);
 

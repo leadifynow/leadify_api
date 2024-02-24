@@ -180,22 +180,27 @@ public class InterestedDao {
 
             // Iterate over the interested items to apply additional validations
             for (Interested interested : interestedList) {
-                // Check if the next_update is today's date, null, or in the past, and the stage is not "Not a Fit"
-                if (interested.getNext_update() == null
+                // Check if the next_update is today's date, null, or in the past,
+                // and the stage is not "Not a Fit", "Completed", "Phone Call", or "Other"
+                if ((interested.getNext_update() == null
                         || isNextUpdateToday(interested.getNext_update())
-                        || isNextUpdateInThePast(interested.getNext_update())) {
+                        || isNextUpdateInThePast(interested.getNext_update()))
+                        && (interested.getStage_id() == null
+                        || !isStageName(interested.getStage_id(), workspaceId, "Not a Fit"))
+                        && (interested.getStage_id() == null
+                        || !isStageName(interested.getStage_id(), workspaceId, "Completed"))
+                        && (interested.getStage_id() == null
+                        || !isStageName(interested.getStage_id(), workspaceId, "Phone Call"))
+                        && (interested.getStage_id() == null
+                        || !isStageName(interested.getStage_id(), workspaceId, "Other"))) {
 
-                    // Check if interested.getStage_id() is not null before comparing
-                    int notAFitStageId = getStageIdForName("Not a Fit", workspaceId);
-                    if (interested.getStage_id() == null || interested.getStage_id() != notAFitStageId) {
-                        // Add the interested item to the valid list
-                        validInterestedList.add(interested);
-                    }
+                    // Add the interested item to the valid list
+                    validInterestedList.add(interested);
                 }
             }
 
-            // Sort the valid interested items by the most recent next update date
-            Collections.sort(validInterestedList, Comparator.comparing(Interested::getCreated_at, Comparator.nullsLast(Comparator.reverseOrder())));
+            // Sort the valid interested items by the next_update date (oldest first), considering null values first
+            Collections.sort(validInterestedList, Comparator.comparing(Interested::getNext_update, Comparator.nullsFirst(Comparator.naturalOrder())));
 
             if (validInterestedList.isEmpty()) {
                 return new ApiResponse<>("No interested items found for the given workspace ID or they are already booked or managed", null, 404);
@@ -207,6 +212,10 @@ public class InterestedDao {
             // Log or handle the exception
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
+    }
+    private boolean isStageName(int stageId, UUID workspaceId, String stageName) {
+        int stageIdFromDB = getStageIdForName(stageName, workspaceId);
+        return stageId == stageIdFromDB;
     }
     private boolean isNextUpdateInThePast(Timestamp nextUpdateTimestamp) {
         if (nextUpdateTimestamp == null) {
