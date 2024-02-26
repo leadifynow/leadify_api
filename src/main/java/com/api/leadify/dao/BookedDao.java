@@ -84,11 +84,21 @@ public class BookedDao {
                     // Handle other data access exceptions
                     e.printStackTrace();
                 }
-            } else {
+            } else if (event_name.equals("Mindful Agency - Discovery Call")){
+                try {
+                    workspaceId = null;
+                }catch (EmptyResultDataAccessException e) {
+                    // Handle case when no workspace with the given name is found
+                    System.out.println("No workspace found for the given name.");
+                } catch (DataAccessException e) {
+                    // Handle other data access exceptions
+                    e.printStackTrace();
+                }
                 // If the event name doesn't match any of the specified conditions, return an appropriate response
+            } else {
                 return new ApiResponse<>("Invalid event name", null, 400);
             }
-
+            System.out.println(booked);
             System.out.println(workspaceId);
 
             // Check if the email exists in the interested table
@@ -175,6 +185,8 @@ public class BookedDao {
             return new ApiResponse<>("Booked created successfully", null, 201);
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("Error creating booked");
+            System.out.println(booked);
             return new ApiResponse<>("Error creating booked", null, 500);
         }
     }
