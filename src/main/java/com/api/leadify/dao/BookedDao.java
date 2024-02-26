@@ -139,7 +139,7 @@ public class BookedDao {
             // Retrieve the auto-generated key (booked_id)
             int bookedId = keyHolder.getKey().intValue();
 
-            // Extracting questions and answers
+// Extracting questions and answers
             JsonNode questionsAndAnswersNode = payloadNode.get("questions_and_answers");
             if (questionsAndAnswersNode != null && questionsAndAnswersNode.isArray()) {
                 for (JsonNode qaNode : questionsAndAnswersNode) {
@@ -150,6 +150,25 @@ public class BookedDao {
                     String qaSql = "INSERT INTO questions_and_answers (question, answer, booked_id) " +
                             "VALUES (?, ?, ?)";
                     jdbcTemplate.update(qaSql, question, answer, bookedId);
+
+                    // Check if the question is "Please provide your business name."
+                    if ("Please provide your business name.".equals(question)) {
+                        // Update the business column in the booked table
+                        String updateBusinessSql = "UPDATE booked SET business = ? WHERE id = ?";
+                        jdbcTemplate.update(updateBusinessSql, answer, bookedId);
+                    }
+
+                    // Check if the question is "How did you hear about Mindful Agency?"
+                    if ("How did you hear about Mindful Agency?".equals(question)) {
+                        // Update the referral column in the booked table
+                        String updateReferralSql = "UPDATE booked SET referral = ? WHERE id = ?";
+                        jdbcTemplate.update(updateReferralSql, answer, bookedId);
+                    }
+                    if ("Please provide your website".equals(question)) {
+                        // Update the website column in the booked table
+                        String updateWebsiteSql = "UPDATE booked SET website = ? WHERE id = ?";
+                        jdbcTemplate.update(updateWebsiteSql, answer, bookedId);
+                    }
                 }
             }
 
