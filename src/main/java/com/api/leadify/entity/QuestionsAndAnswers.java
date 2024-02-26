@@ -1,7 +1,7 @@
 package com.api.leadify.entity;
 
 public class QuestionsAndAnswers {
-    private int id;
+    private Integer id;
     private String answer;
     private Integer position;
     private String question;

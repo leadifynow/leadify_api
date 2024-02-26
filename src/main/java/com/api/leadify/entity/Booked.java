@@ -2,10 +2,11 @@ package com.api.leadify.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Booked {
-    private int id;
+    private Integer id;
     private String email;
     private String first_name;
     private String last_name;
@@ -16,6 +17,30 @@ public class Booked {
     private Integer company_id;
     private String workspace_id;
     private String event_name;
+
+    private String business;
+    private String referral;
+    private List<QuestionsAndAnswers> questionsAndAnswersList = new ArrayList<>();
+
+    public void addQuestionsAndAnswers(QuestionsAndAnswers qa) {
+        this.questionsAndAnswersList.add(qa);
+    }
+
+    public String getBusiness() {
+        return business;
+    }
+
+    public void setBusiness(String business) {
+        this.business = business;
+    }
+
+    public String getReferral() {
+        return referral;
+    }
+
+    public void setReferral(String referral) {
+        this.referral = referral;
+    }
 
     public String getWorkspace_id() {
         return workspace_id;
