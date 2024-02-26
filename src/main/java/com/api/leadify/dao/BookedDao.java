@@ -61,7 +61,7 @@ public class BookedDao {
                 String sql = "SELECT id FROM workspace WHERE name = ?";
                 try {
                     // Execute the SELECT query and retrieve the ID
-                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Natalie");
+                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Lauren");
                 } catch (EmptyResultDataAccessException e) {
                     // Handle case when no workspace with the given name is found
                     System.out.println("No workspace found for the given name.");
@@ -76,7 +76,7 @@ public class BookedDao {
                 String sql = "SELECT id FROM workspace WHERE name = ?";
                 try {
                     // Execute the SELECT query and retrieve the ID
-                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Lauren");
+                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Natalie");
                 } catch (EmptyResultDataAccessException e) {
                     // Handle case when no workspace with the given name is found
                     System.out.println("No workspace found for the given name.");
