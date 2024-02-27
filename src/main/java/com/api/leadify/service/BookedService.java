@@ -38,4 +38,12 @@ public class BookedService {
     public ApiResponse<Void> resetInterestedAndBooked(int interestedId) {
         return bookedDao.resetInterestedAndBooked(interestedId);
     }
+    public ApiResponse<PaginatedResponse<List<Booked>>> findByCompanyIdAndWorkspaceId(int companyId, String workspaceId, String searchParam, int page, int pageSize) {
+        try {
+            return bookedDao.findByCompanyIdAndWorkspaceId(companyId, workspaceId, searchParam, page, pageSize);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>("Error retrieving bookings by company ID and workspace ID", null, 500);
+        }
+    }
 }

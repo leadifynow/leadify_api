@@ -315,5 +315,55 @@ public class BookedDao {
             return new ApiResponse<>(errorMessage, null, 500);
         }
     }
+    public ApiResponse<PaginatedResponse<List<Booked>>> findByCompanyIdAndWorkspaceId(int companyId, String workspaceId, String searchParam, int page, int pageSize) {
+        try {
+            String countQuery = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+            String query = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+
+            // Append search condition if provided
+            if (searchParam != null && !searchParam.isEmpty()) {
+                countQuery += " AND (email LIKE '%" + searchParam + "%' OR first_name LIKE '%" + searchParam + "%' OR last_name LIKE '%" + searchParam + "%' OR name LIKE '%" + searchParam + "%' OR event_name LIKE '%" + searchParam + "%' OR business LIKE '%" + searchParam + "%')";
+                query += " AND (email LIKE '%" + searchParam + "%' OR first_name LIKE '%" + searchParam + "%' OR last_name LIKE '%" + searchParam + "%' OR name LIKE '%" + searchParam + "%' OR event_name LIKE '%" + searchParam + "%' OR business LIKE '%" + searchParam + "%')";
+            }
+
+            // Get total count
+            int totalItems = jdbcTemplate.queryForObject(countQuery, Integer.class, companyId, workspaceId);
+
+            // Calculate total pages
+            int totalPages = (int) Math.ceil((double) totalItems / pageSize);
+
+            // Validate page parameter
+            if (page <= 0) {
+                page = 1; // Default to the first page
+            }
+
+            // Validate pageSize parameter
+            if (pageSize <= 0) {
+                pageSize = 10; // Default page size
+            }
+
+            // Calculate offset
+            int offset = (page - 1) * pageSize;
+
+            // Apply pagination to the query
+            String paginatedQuery = query + " LIMIT ? OFFSET ?";
+            List<Booked> bookedList = jdbcTemplate.query(paginatedQuery, new Object[]{companyId, workspaceId, pageSize, offset}, new BeanPropertyRowMapper<>(Booked.class));
+
+            // Check if there is a next page
+            boolean hasNextPage = page < totalPages;
+
+            // Prepare paginated response
+            PaginatedResponse<List<Booked>> paginatedResponse = new PaginatedResponse<>(bookedList, page, pageSize, totalItems, totalPages, hasNextPage);
+
+            if (bookedList.isEmpty()) {
+                return new ApiResponse<>("No bookings found for the given company ID and workspace ID", null, 404);
+            } else {
+                return new ApiResponse<>("Bookings retrieved successfully", paginatedResponse, 200);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>("Error retrieving bookings by company ID and workspace ID", null, 500);
+        }
+    }
 
 }

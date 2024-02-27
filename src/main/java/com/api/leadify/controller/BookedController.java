@@ -47,4 +47,14 @@ public class BookedController {
     public ApiResponse<Void> resetInterestedAndBooked(@PathVariable int interestedId) {
         return bookedService.resetInterestedAndBooked(interestedId);
     }
+    @GetMapping("/booked/{companyId}/{workspaceId}/{searchParam}/{page}/{pageSize}")
+    public ApiResponse<PaginatedResponse<List<Booked>>> findByCompanyIdAndWorkspaceId(
+            @PathVariable int companyId,
+            @PathVariable(required = false) String workspaceId,
+            @PathVariable(required = false) String searchParam,
+            @PathVariable int page,
+            @PathVariable int pageSize
+    ) {
+        return bookedService.findByCompanyIdAndWorkspaceId(companyId, workspaceId, searchParam, page, pageSize);
+    }
 }
