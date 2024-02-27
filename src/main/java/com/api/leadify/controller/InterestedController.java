@@ -1,6 +1,7 @@
 package com.api.leadify.controller;
 
 import com.api.leadify.dao.ApiResponse;
+import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Interested;
 import com.api.leadify.service.InterestedService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,9 +34,9 @@ public class InterestedController {
     public List<Interested> getAll() {
         return interestedService.getAll();
     }
-    @GetMapping("/getAllByWorkspaceId/{workspaceId}")
-    public ApiResponse<List<Interested>> getAllByWorkspaceId(@PathVariable UUID workspaceId) {
-        return interestedService.getAllByWorkspaceId(workspaceId);
+    @GetMapping("/getAllByWorkspaceId/{workspaceId}/{page}/{pageSize}")
+    public ApiResponse<PaginatedResponse<List<Interested>>> getAllByWorkspaceId(@PathVariable UUID workspaceId, @PathVariable int page, @PathVariable int pageSize) {
+        return interestedService.getAllByWorkspaceId(workspaceId, page, pageSize);
     }
     @PutMapping("/updateStage/{interestedId}/{stageId}")
     public ApiResponse<String> updateStage2(@PathVariable Integer interestedId, @PathVariable Integer stageId) {

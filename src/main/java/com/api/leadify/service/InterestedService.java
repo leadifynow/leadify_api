@@ -2,6 +2,7 @@ package com.api.leadify.service;
 
 import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.InterestedDao;
+import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Interested;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,8 +28,8 @@ public class InterestedService {
     public List<Interested> getAll() {
         return interestedDao.getAll();
     }
-    public ApiResponse<List<Interested>> getAllByWorkspaceId(UUID workspaceId) {
-        return interestedDao.getAllByWorkspaceId(workspaceId);
+    public ApiResponse<PaginatedResponse<List<Interested>>> getAllByWorkspaceId(UUID workspaceId, int page, int pageSize) {
+        return interestedDao.getAllByWorkspaceId(workspaceId, page, pageSize);
     }
     public ApiResponse<String> updateStage2(Integer interestedId, Integer stageId) {
         return interestedDao.updateStage2(interestedId, stageId);
