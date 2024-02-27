@@ -57,4 +57,8 @@ public class BookedController {
     ) {
         return bookedService.findByCompanyIdAndWorkspaceId(companyId, workspaceId, searchParam, page, pageSize);
     }
+    @PostMapping("/manual_creation")
+    public ApiResponse<Void> createManualBooking (@RequestBody Booked booked) {
+        return bookedService.createManualBooking(booked);
+    }
 }

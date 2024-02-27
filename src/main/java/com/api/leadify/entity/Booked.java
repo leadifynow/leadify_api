@@ -20,6 +20,20 @@ public class Booked {
 
     private String business;
     private String referral;
+    private String meeting_date;
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getMeeting_date() {
+        return meeting_date;
+    }
+
+    public void setMeeting_date(String meeting_date) {
+        this.meeting_date = meeting_date;
+    }
+
     private List<QuestionsAndAnswers> questionsAndAnswersList = new ArrayList<>();
 
     public void addQuestionsAndAnswers(QuestionsAndAnswers qa) {

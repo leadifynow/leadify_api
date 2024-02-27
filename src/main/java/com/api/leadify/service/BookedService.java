@@ -46,4 +46,7 @@ public class BookedService {
             return new ApiResponse<>("Error retrieving bookings by company ID and workspace ID", null, 500);
         }
     }
+    public ApiResponse<Void> createManualBooking(Booked booked) {
+        return bookedDao.createManual(booked);
+    }
 }

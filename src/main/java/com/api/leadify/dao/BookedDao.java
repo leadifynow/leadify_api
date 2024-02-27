@@ -14,12 +14,13 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 @Repository
 public class BookedDao {
@@ -365,5 +366,34 @@ public class BookedDao {
             return new ApiResponse<>("Error retrieving bookings by company ID and workspace ID", null, 500);
         }
     }
+    public ApiResponse<Void> createManual(Booked booked) {
+        try {
+            // Parse the meeting date
+            SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
+            Date parsedDate = dateFormat.parse(booked.getMeeting_date());
+            Timestamp meetingTimestamp = new Timestamp(parsedDate.getTime());
+            // Insert new booking
+            String insertBookingSql = "INSERT INTO booked (email, name, company_id, workspace_id, event_name, referral, meeting_date) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            int insertedRows = jdbcTemplate.update(insertBookingSql,
+                    booked.getEmail(),
+                    booked.getName(),
+                    booked.getCompany_id(),
+                    booked.getWorkspace_id(),
+                    booked.getEvent_name(),
+                    booked.getReferral(),
+                    meetingTimestamp);
 
+            if (insertedRows > 0) {
+                return new ApiResponse<>("Booking created successfully", null, 200);
+            } else {
+                return new ApiResponse<>("Failed to create booking", null, 400);
+            }
+        } catch (DataAccessException e) {
+            String errorMessage = "Error creating booking: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
+            e.printStackTrace();
+            return new ApiResponse<>(errorMessage, null, 500);
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
