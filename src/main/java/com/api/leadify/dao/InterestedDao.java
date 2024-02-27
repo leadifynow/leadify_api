@@ -202,6 +202,9 @@ public class InterestedDao {
             // Calculate total items after applying the filters
             int totalItems = validInterestedList.size();
 
+            // Sort the valid interested items by the next_update date (oldest first), considering null values first
+            Collections.sort(validInterestedList, Comparator.comparing(Interested::getNext_update,
+                    Comparator.nullsFirst(Comparator.reverseOrder())));
             // Calculate total pages
             int totalPages = (int) Math.ceil((double) totalItems / pageSize);
 
@@ -218,7 +221,7 @@ public class InterestedDao {
             // Calculate offset
             int offset = (page - 1) * pageSize;
 
-            // Apply pagination to the filtered list
+            // Apply pagination to the sorted and filtered list
             List<Interested> paginatedInterestedList = validInterestedList.subList(offset, Math.min(offset + pageSize, validInterestedList.size()));
 
             // Check if there is a next page
@@ -238,6 +241,7 @@ public class InterestedDao {
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
+
     private boolean isStageName(int stageId, UUID workspaceId, String stageName) {
         int stageIdFromDB = getStageIdForName(stageName, workspaceId);
         return stageId == stageIdFromDB;
