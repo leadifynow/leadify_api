@@ -60,7 +60,11 @@ public class UserColumnsDao {
                     + "notes = ?, "
                     + "website = ?, "
                     + "industry = ?, "
-                    + "manager = ? "
+                    + "manager = ?, "
+                    + "name = ?, "
+                    + "event_name = ?, "
+                    + "referral = ?, "
+                    + "business = ? "
                     + "WHERE id = ? AND user_id = ? AND workspace_id = ?";
 
             int rowsUpdated = jdbcTemplate.update(sql,
@@ -76,6 +80,10 @@ public class UserColumnsDao {
                     userColumns.getWebsite(),
                     userColumns.getIndustry(),
                     userColumns.getManager(),
+                    userColumns.getName(),
+                    userColumns.getEvent_name(),
+                    userColumns.getReferral(),
+                    userColumns.getBusiness(),
                     userColumns.getId(),
                     userColumns.getUser_id(),
                     userColumns.getWorkspaceId());

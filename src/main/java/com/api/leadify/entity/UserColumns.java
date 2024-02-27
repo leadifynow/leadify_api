@@ -19,6 +19,42 @@ public class UserColumns {
     private Boolean industry;
     private Boolean manager;
     private Boolean next_update;
+    private Boolean name;
+    private Boolean event_name;
+    private Boolean referral;
+    private Boolean business;
+
+    public Boolean getName() {
+        return name;
+    }
+
+    public void setName(Boolean name) {
+        this.name = name;
+    }
+
+    public Boolean getEvent_name() {
+        return event_name;
+    }
+
+    public void setEvent_name(Boolean event_name) {
+        this.event_name = event_name;
+    }
+
+    public Boolean getReferral() {
+        return referral;
+    }
+
+    public void setReferral(Boolean referral) {
+        this.referral = referral;
+    }
+
+    public Boolean getBusiness() {
+        return business;
+    }
+
+    public void setBusiness(Boolean business) {
+        this.business = business;
+    }
 
     public String getWorkspace_id() {
         return workspace_id;
