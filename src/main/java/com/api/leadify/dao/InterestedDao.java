@@ -169,9 +169,38 @@ public class InterestedDao {
     }
     public ApiResponse<PaginatedResponse<List<Interested>>> getAllByWorkspaceId(UUID workspaceId, int page, int pageSize) {
         try {
-            // Query to retrieve interested items based on workspace ID, where booked is 0 and manager is null
-            String query = "SELECT COUNT(*) FROM interested WHERE workspace = ? AND booked = 0 AND manager IS NULL";
-            int totalItems = jdbcTemplate.queryForObject(query, Integer.class, workspaceId.toString());
+            // Query to retrieve all interested items based on workspace ID, where booked is 0 and manager is null
+            String query = "SELECT * FROM interested WHERE workspace = ? AND booked = 0 AND manager IS NULL";
+
+            // Execute the query and retrieve all interested items
+            List<Interested> interestedList = jdbcTemplate.query(query, new BeanPropertyRowMapper<>(Interested.class), workspaceId.toString());
+
+            // List to hold valid interested items
+            List<Interested> validInterestedList = new ArrayList<>();
+
+            // Iterate over the interested items to apply additional validations
+            for (Interested interested : interestedList) {
+                // Check if the next_update is today's date, null, or in the past,
+                // and the stage is not "Not a Fit", "Completed", "Phone Call", or "Other"
+                if ((interested.getNext_update() == null
+                        || isNextUpdateToday(interested.getNext_update())
+                        || isNextUpdateInThePast(interested.getNext_update()))
+                        && (interested.getStage_id() == null
+                        || !isStageName(interested.getStage_id(), workspaceId, "Not a Fit"))
+                        && (interested.getStage_id() == null
+                        || !isStageName(interested.getStage_id(), workspaceId, "Completed"))
+                        && (interested.getStage_id() == null
+                        || !isStageName(interested.getStage_id(), workspaceId, "Phone Call"))
+                        && (interested.getStage_id() == null
+                        || !isStageName(interested.getStage_id(), workspaceId, "Other"))) {
+
+                    // Add the interested item to the valid list
+                    validInterestedList.add(interested);
+                }
+            }
+
+            // Calculate total items after applying the filters
+            int totalItems = validInterestedList.size();
 
             // Calculate total pages
             int totalPages = (int) Math.ceil((double) totalItems / pageSize);
@@ -189,18 +218,16 @@ public class InterestedDao {
             // Calculate offset
             int offset = (page - 1) * pageSize;
 
-            // Query to retrieve paginated interested items
-            String paginatedQuery = "SELECT * FROM interested WHERE workspace = ? AND booked = 0 AND manager IS NULL LIMIT ? OFFSET ?";
-            List<Interested> interestedList = jdbcTemplate.query(paginatedQuery, new BeanPropertyRowMapper<>(Interested.class),
-                    workspaceId.toString(), pageSize, offset);
+            // Apply pagination to the filtered list
+            List<Interested> paginatedInterestedList = validInterestedList.subList(offset, Math.min(offset + pageSize, validInterestedList.size()));
 
             // Check if there is a next page
             boolean hasNextPage = page < totalPages;
 
             // Prepare paginated response
-            PaginatedResponse<List<Interested>> paginatedResponse = new PaginatedResponse<>(interestedList, page, pageSize, totalItems, totalPages, hasNextPage);
+            PaginatedResponse<List<Interested>> paginatedResponse = new PaginatedResponse<>(paginatedInterestedList, page, pageSize, totalItems, totalPages, hasNextPage);
 
-            if (interestedList.isEmpty()) {
+            if (paginatedInterestedList.isEmpty()) {
                 return new ApiResponse<>("No interested items found for the given workspace ID or they are already booked or managed", null, 404);
             } else {
                 return new ApiResponse<>("Interested items retrieved successfully", paginatedResponse, 200);
@@ -211,7 +238,6 @@ public class InterestedDao {
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
-
     private boolean isStageName(int stageId, UUID workspaceId, String stageName) {
         int stageIdFromDB = getStageIdForName(stageName, workspaceId);
         return stageId == stageIdFromDB;

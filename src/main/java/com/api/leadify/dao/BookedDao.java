@@ -236,8 +236,6 @@ public class BookedDao {
             return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-
-
     public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId) {
         try {
             String sql = "SELECT i.id, i.event_type, i.workspace, i.campaign_id, i.campaign_name, i.lead_email as email, i.title, i.email, " +
