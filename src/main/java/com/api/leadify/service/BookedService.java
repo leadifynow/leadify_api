@@ -2,6 +2,7 @@ package com.api.leadify.service;
 
 import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.BookedDao;
+import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Booked;
 import com.api.leadify.entity.Interested;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +23,8 @@ public class BookedService {
     public ApiResponse<Void> createBooked(int companyId, Booked booked) {
         return bookedDao.createBooked(booked, companyId);
     }
-    public ApiResponse<List<Booked>> getAllBookedByCompanyId(int companyId, String workspaceId) {
-        return bookedDao.getAllBookedByCompanyId(companyId, workspaceId);
+    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize) {
+        return bookedDao.getAllBookedByCompanyId(companyId, workspaceId, page, pageSize);
     }
     public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId) {
         return bookedDao.searchBookedRecords(searchTerm, companyId);

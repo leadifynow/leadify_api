@@ -190,15 +190,45 @@ public class BookedDao {
             return new ApiResponse<>("Error creating booked", null, 500);
         }
     }
-    public ApiResponse<List<Booked>> getAllBookedByCompanyId(int companyId, String workspaceId) {
-        System.out.println(workspaceId);
+    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize) {
         try {
-            String sql = "SELECT * FROM booked WHERE company_id = ? AND workspace_id = ? OR workspace_id IS NULL";
-            List<Booked> bookedList = jdbcTemplate.query(sql, new Object[]{companyId, workspaceId.toString()}, new BeanPropertyRowMapper<>(Booked.class));
+            // Query to count total bookings
+            String countSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+            int totalItems = jdbcTemplate.queryForObject(countSql, Integer.class, companyId, workspaceId);
+
+            // Calculate total pages
+            int totalPages = (int) Math.ceil((double) totalItems / pageSize);
+
+            // Validate page parameter
+            if (page <= 0) {
+                page = 1; // Default to the first page
+            }
+
+            // Validate pageSize parameter
+            if (pageSize <= 0) {
+                pageSize = 10; // Default page size
+            }
+
+            // Calculate offset
+            int offset = (page - 1) * pageSize;
+
+            // Query to retrieve paginated bookings with ordering
+            String sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
+                    "ORDER BY CASE WHEN interested_id IS NULL THEN 0 ELSE 1 END ASC, created_at DESC " +
+                    "LIMIT ? OFFSET ?";
+            List<Booked> bookedList = jdbcTemplate.query(sql, new Object[]{companyId, workspaceId, pageSize, offset},
+                    new BeanPropertyRowMapper<>(Booked.class));
+
+            // Check if there is a next page
+            boolean hasNextPage = page < totalPages;
+
+            // Prepare paginated response
+            PaginatedResponse<List<Booked>> paginatedResponse = new PaginatedResponse<>(bookedList, page, pageSize, totalItems, totalPages, hasNextPage);
+
             if (bookedList.isEmpty()) {
                 return new ApiResponse<>("No bookings found for the given company ID and workspace ID", null, 404);
             } else {
-                return new ApiResponse<>("Bookings retrieved successfully", bookedList, 200);
+                return new ApiResponse<>("Bookings retrieved successfully", paginatedResponse, 200);
             }
         } catch (DataAccessException e) {
             String errorMessage = "Error retrieving bookings by company ID and workspace ID. Details: " + e.getLocalizedMessage();
@@ -206,6 +236,8 @@ public class BookedDao {
             return new ApiResponse<>(errorMessage, null, 500);
         }
     }
+
+
     public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId) {
         try {
             String sql = "SELECT i.id, i.event_type, i.workspace, i.campaign_id, i.campaign_name, i.lead_email as email, i.title, i.email, " +

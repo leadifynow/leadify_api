@@ -1,6 +1,7 @@
 package com.api.leadify.controller;
 
 import com.api.leadify.dao.ApiResponse;
+import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Booked;
 import com.api.leadify.entity.Interested;
 import com.api.leadify.service.BookedService;
@@ -26,9 +27,9 @@ public class BookedController {
     public ApiResponse<Void> createBooked(@PathVariable("company_id") int companyId, @RequestBody Booked booked) {
         return bookedService.createBooked(companyId, booked);
     }
-    @GetMapping("/getByCompany/{companyId}/{workspace_id}")
-    public ApiResponse<List<Booked>> getAllBookedByCompanyId(@PathVariable("companyId") int companyId, @PathVariable("workspace_id") String workspace_id) {
-        return bookedService.getAllBookedByCompanyId(companyId, workspace_id);
+    @GetMapping("/getByCompany/{companyId}/{workspace_id}/{page}/{pageSize}")
+    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(@PathVariable("companyId") int companyId, @PathVariable("workspace_id") String workspace_id, @PathVariable int page, @PathVariable int pageSize) {
+        return bookedService.getAllBookedByCompanyId(companyId, workspace_id, page, pageSize);
     }
     @GetMapping("/search")
     public ApiResponse<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId) {
