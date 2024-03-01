@@ -244,7 +244,7 @@ public class BookedDao {
                     "FROM interested i " +
                     "JOIN workspace w ON i.workspace = w.id " +
                     "JOIN company c ON w.company_id = c.id " +
-                    "WHERE (i.id = ? OR i.lead_email LIKE ? OR i.firstName LIKE ? OR i.lastName LIKE ? OR i.notes LIKE ?) AND c.id = ? AND i.booked = 0";
+                    "WHERE (i.id = ? OR i.lead_email LIKE ? OR i.firstName LIKE ? OR i.lastName LIKE ? OR i.notes LIKE ?) AND c.id = ?";
             String searchTermLike = "%" + searchTerm + "%";
             List<Booked> bookedList = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Booked.class), searchTerm, searchTermLike, searchTermLike, searchTermLike, searchTermLike, companyId);
             return new ApiResponse<>("Booked records retrieved successfully", bookedList, 200);
