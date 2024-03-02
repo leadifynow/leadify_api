@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -284,6 +285,14 @@ public class InterestedDao {
                     LocalDateTime updatedAt = LocalDateTime.now(); // Assuming you have access to the updated_at date, here using current time
                     LocalDateTime nextUpdate = updatedAt.plusDays(followup);
 
+                    // If the next update falls on a weekend, adjust it to the following Monday
+                    DayOfWeek dayOfWeek = nextUpdate.getDayOfWeek();
+                    if (dayOfWeek == DayOfWeek.SATURDAY) {
+                        nextUpdate = nextUpdate.plusDays(2); // Move to Monday
+                    } else if (dayOfWeek == DayOfWeek.SUNDAY) {
+                        nextUpdate = nextUpdate.plusDays(1); // Move to Monday
+                    }
+
                     // Update the next_update column in the interested table
                     String updateNextUpdateSql = "UPDATE interested SET next_update = ? WHERE id = ?";
                     jdbcTemplate.update(updateNextUpdateSql, Timestamp.valueOf(nextUpdate), interestedId);
@@ -297,6 +306,7 @@ public class InterestedDao {
             return new ApiResponse<>("Error updating stage for interested item", null, 500);
         }
     }
+
     public ApiResponse<Void> updateManager(int interestedId, int managerId) {
         try {
             // Update the manager for the interested record
