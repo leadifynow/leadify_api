@@ -4,6 +4,7 @@ import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.InterestedDao;
 import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Interested;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -62,5 +63,11 @@ public class InterestedService {
     }
     public ApiResponse<List<Interested>> getAllByManagerAndBookedIsZero(Integer manager) {
         return interestedDao.getAllByManagerAndBookedIsZero(manager);
+    }
+    public ApiResponse<String> updateStageArray(JsonNode stageUpdates) {
+        return  interestedDao.updateStageArray(stageUpdates);
+    }
+    public ApiResponse<String> updateStageAndNextUpdateArray(JsonNode stageUpdates) {
+        return interestedDao.updateStageAndNextUpdateArray(stageUpdates);
     }
 }

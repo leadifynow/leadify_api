@@ -4,6 +4,7 @@ import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Interested;
 import com.api.leadify.service.InterestedService;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -71,5 +72,13 @@ public class InterestedController {
     @GetMapping("/manager/{manager}")
     public ApiResponse<List<Interested>> getAllByManagerAndBookedIsZero(@PathVariable Integer manager) {
         return interestedService.getAllByManagerAndBookedIsZero(manager);
+    }
+    @PutMapping("/updateStages")
+    public ApiResponse<String> updateStageArray(@RequestBody JsonNode stageUpdates) {
+        return interestedService.updateStageArray(stageUpdates);
+    }
+    @PutMapping("/updateStageCustomDate")
+    public ApiResponse<String> updateStageAndNextUpdateArray(@RequestBody JsonNode stageUpdates) {
+        return interestedService.updateStageAndNextUpdateArray(stageUpdates);
     }
 }

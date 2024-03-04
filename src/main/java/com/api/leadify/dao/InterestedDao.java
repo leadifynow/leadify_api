@@ -4,6 +4,7 @@ import com.api.leadify.entity.Campaign;
 import com.api.leadify.entity.Interested;
 import com.api.leadify.entity.Stage;
 import com.api.leadify.entity.Workspace;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -19,6 +20,7 @@ import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -242,7 +244,6 @@ public class InterestedDao {
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
-
     private boolean isStageName(int stageId, UUID workspaceId, String stageName) {
         int stageIdFromDB = getStageIdForName(stageName, workspaceId);
         return stageId == stageIdFromDB;
@@ -306,7 +307,48 @@ public class InterestedDao {
             return new ApiResponse<>("Error updating stage for interested item", null, 500);
         }
     }
+    public ApiResponse<String> updateStageArray(JsonNode stageUpdates) {
+        try {
+            int updatedStagesCount = 0;
 
+            for (JsonNode update : stageUpdates) {
+                Integer interestedId = update.get("id").asInt();
+                Integer stageId = update.get("stage_id").asInt();
+
+                String sql = "UPDATE interested SET stage_id = ? WHERE id = ?";
+                int affectedRows = jdbcTemplate.update(sql, stageId, interestedId);
+
+                if (affectedRows > 0) {
+                    // Retrieve the followup value from the corresponding stage
+                    Integer followup = stageDao.getFollowupForStage(stageId);
+
+                    if (followup != null) {
+                        // Calculate the next update date
+                        LocalDateTime updatedAt = LocalDateTime.now(); // Assuming you have access to the updated_at date, here using current time
+                        LocalDateTime nextUpdate = updatedAt.plusDays(followup);
+
+                        // If the next update falls on a weekend, adjust it to the following Monday
+                        DayOfWeek dayOfWeek = nextUpdate.getDayOfWeek();
+                        if (dayOfWeek == DayOfWeek.SATURDAY) {
+                            nextUpdate = nextUpdate.plusDays(2); // Move to Monday
+                        } else if (dayOfWeek == DayOfWeek.SUNDAY) {
+                            nextUpdate = nextUpdate.plusDays(1); // Move to Monday
+                        }
+
+                        // Update the next_update column in the interested table
+                        String updateNextUpdateSql = "UPDATE interested SET next_update = ? WHERE id = ?";
+                        jdbcTemplate.update(updateNextUpdateSql, Timestamp.valueOf(nextUpdate), interestedId);
+                    }
+
+                    updatedStagesCount++;
+                }
+            }
+
+            return new ApiResponse<>("Updated " + updatedStagesCount + " stages", null, 200);
+        } catch (Exception e) {
+            return new ApiResponse<>("Error updating stages for interested items", null, 500);
+        }
+    }
     public ApiResponse<Void> updateManager(int interestedId, int managerId) {
         try {
             // Update the manager for the interested record
@@ -455,5 +497,27 @@ public class InterestedDao {
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
+    public ApiResponse<String> updateStageAndNextUpdateArray(JsonNode stageUpdates) {
+        try {
+            int updatedStagesCount = 0;
 
+            for (JsonNode update : stageUpdates) {
+                Integer interestedId = update.get("id").asInt();
+                Integer stageId = update.get("stage_id").asInt();
+                OffsetDateTime nextUpdateDateTime = OffsetDateTime.parse(update.get("next_update").asText());
+                LocalDateTime nextUpdateDate = nextUpdateDateTime.toLocalDateTime();
+
+                String sql = "UPDATE interested SET stage_id = ?, next_update = ? WHERE id = ?";
+                int affectedRows = jdbcTemplate.update(sql, stageId, Timestamp.valueOf(nextUpdateDate), interestedId);
+
+                if (affectedRows > 0) {
+                    updatedStagesCount++;
+                }
+            }
+
+            return new ApiResponse<>("Updated " + updatedStagesCount + " stages with next update date", null, 200);
+        } catch (Exception e) {
+            return new ApiResponse<>("Error updating stages and next update date for interested items: " + e.getMessage(), null, 500);
+        }
+    }
 }
