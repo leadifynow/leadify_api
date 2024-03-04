@@ -372,8 +372,21 @@ public class BookedDao {
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
             Date parsedDate = dateFormat.parse(booked.getMeeting_date());
             Timestamp meetingTimestamp = new Timestamp(parsedDate.getTime());
+            String check = "SELECT id FROM interested where lead_email = ?";
+            Boolean updateHappen = false;
+            Integer interestedId = null;
+            try {
+                interestedId = jdbcTemplate.queryForObject(check, Integer.class, booked.getEmail());
+                if (interestedId != null) {
+                    String queryToUpdateInterested = "UPDATE interested SET booked = 1 WHERE id = ?";
+                    jdbcTemplate.update(queryToUpdateInterested, interestedId);
+                    updateHappen = true;
+                }
+            } catch (EmptyResultDataAccessException e) {
+                // No matching records found in the interested table
+            }
             // Insert new booking
-            String insertBookingSql = "INSERT INTO booked (email, name, company_id, workspace_id, event_name, referral, meeting_date) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            String insertBookingSql = "INSERT INTO booked (email, name, company_id, workspace_id, event_name, referral, meeting_date, interested_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             int insertedRows = jdbcTemplate.update(insertBookingSql,
                     booked.getEmail(),
                     booked.getName(),
@@ -381,10 +394,12 @@ public class BookedDao {
                     booked.getWorkspace_id(),
                     booked.getEvent_name(),
                     booked.getReferral(),
-                    meetingTimestamp);
+                    meetingTimestamp,
+                    interestedId
+            );
 
             if (insertedRows > 0) {
-                return new ApiResponse<>("Booking created successfully", null, 200);
+                return new ApiResponse<>(updateHappen ? "Booking created and matched successfully" : "Booking created successfully", null, 200);
             } else {
                 return new ApiResponse<>("Failed to create booking", null, 400);
             }

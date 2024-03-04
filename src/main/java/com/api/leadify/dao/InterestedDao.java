@@ -11,11 +11,15 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -138,29 +142,46 @@ public class InterestedDao {
         }
 
         // Insertamos en la table interested
-        String sql = "INSERT INTO interested (event_type, workspace, campaign_id, campaign_name, lead_email, title, email, " +
-                "website, industry, lastName, firstName, number_of_employees, companyName, linkedin_url, stage_id) " + // Include stage_id in the query
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String insertQuery = "INSERT INTO interested (event_type, workspace, campaign_id, campaign_name, lead_email, title, email, " +
+                "website, industry, lastName, firstName, number_of_employees, companyName, linkedin_url, stage_id, booked) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        jdbcTemplate.update(
-                sql,
-                interested.getEvent_type(),
-                interested.getWorkspace().toString(),
-                interested.getCampaign_id().toString(),
-                interested.getCampaign_name(),
-                interested.getLead_email(),
-                interested.getTitle(),
-                interested.getEmail(),
-                interested.getWebsite(),
-                interested.getIndustry(),
-                interested.getLastName(),
-                interested.getFirstName(),
-                interested.getNumber_of_employees(),
-                interested.getCompanyName(),
-                interested.getLinkedin_url(),
-                null
-                // interested.getStage_id() // Pass the stage_id value to the query
-        );
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, interested.getEvent_type());
+            ps.setString(2, interested.getWorkspace().toString());
+            ps.setString(3, interested.getCampaign_id().toString());
+            ps.setString(4, interested.getCampaign_name());
+            ps.setString(5, interested.getLead_email());
+            ps.setString(6, interested.getTitle());
+            ps.setString(7, interested.getEmail());
+            ps.setString(8, interested.getWebsite());
+            ps.setString(9, interested.getIndustry());
+            ps.setString(10, interested.getLastName());
+            ps.setString(11, interested.getFirstName());
+            ps.setString(12, interested.getNumber_of_employees());
+            ps.setString(13, interested.getCompanyName());
+            ps.setString(14, interested.getLinkedin_url());
+            ps.setObject(15, null); // interested.getStage_id()
+            ps.setInt(16, 0); // booked status initially set to 0
+            return ps;
+        }, keyHolder);
+
+        // Get the generated interested_id
+        int interestedId = keyHolder.getKey().intValue();
+        // Check if the email exists in the booked table
+        String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ?";
+        int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, leadEmail);
+
+        if (emailExistsInBooked > 0) {
+            // If the email exists in booked table, update booked status to 1
+            String updateInterestedQuery = "UPDATE interested SET booked = 1 WHERE lead_email = ?";
+            jdbcTemplate.update(updateInterestedQuery, leadEmail);
+
+            String updateBookedQuery = "UPDATE booked SET interested_id = ? WHERE email = ?";
+            jdbcTemplate.update(updateBookedQuery, interestedId, leadEmail);
+        }
     }
     public void updateStage(Integer stageId, Integer interestedId) {
         String sql = "UPDATE interested SET stage_id = ? WHERE id = ?";
@@ -450,7 +471,27 @@ public class InterestedDao {
                     null,
                     null
             );
-            return new ApiResponse<>("Lead created successfully", null, 201);
+
+            // Get the generated interested_id
+            String getInterestedIdQuery = "SELECT LAST_INSERT_ID()";
+            int interestedId = jdbcTemplate.queryForObject(getInterestedIdQuery, Integer.class);
+
+            // Check if the email exists in the booked table
+            String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ?";
+            int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, interested.getLead_email());
+            Boolean updateHappen = false;
+            if (emailExistsInBooked > 0) {
+                // If the email exists in booked table, update booked status to 1
+                String updateInterestedQuery = "UPDATE interested SET booked = 1 WHERE lead_email = ?";
+                jdbcTemplate.update(updateInterestedQuery, interested.getLead_email());
+
+                String updateBookedQuery = "UPDATE booked SET interested_id = ? WHERE email = ?";
+                jdbcTemplate.update(updateBookedQuery, interestedId, interested.getLead_email());
+
+                updateHappen = true;
+            }
+
+            return new ApiResponse<>(updateHappen ? "Lead created and matched successfully" :"Lead created successfully", null, 201);
         } catch (DataAccessException e) {
             String errorMessage = "Error creating Lead: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
             e.printStackTrace();
