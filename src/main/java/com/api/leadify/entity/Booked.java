@@ -21,6 +21,23 @@ public class Booked {
     private String business;
     private String referral;
     private String meeting_date;
+    private String notes;
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public List<QuestionsAndAnswers> getQuestionsAndAnswersList() {
+        return questionsAndAnswersList;
+    }
+
+    public void setQuestionsAndAnswersList(List<QuestionsAndAnswers> questionsAndAnswersList) {
+        this.questionsAndAnswersList = questionsAndAnswersList;
+    }
 
     public void setId(Integer id) {
         this.id = id;

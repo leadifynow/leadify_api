@@ -239,8 +239,8 @@ public class BookedDao {
     }
     public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId) {
         try {
-            String sql = "SELECT i.id, i.event_type, i.workspace, i.campaign_id, i.campaign_name, i.lead_email as email, i.title, i.email, " +
-                    "i.website, i.industry, i.lastName, i.firstName, i.number_of_employees, i.companyName, i.linkedin_url, i.stage_id, i.notes, 0 as booked " +
+            String sql = "SELECT i.id, i.event_type AS event_name, i.workspace AS workspace_id, i.campaign_id AS campaign_id, i.campaign_name AS campaign_name, i.lead_email AS email, i.title, i.email AS second_email, " +
+                    "i.website, i.industry, i.lastName AS last_name, i.firstName AS first_name, i.number_of_employees AS business, i.companyName AS name, i.linkedin_url, i.stage_id, i.notes, 0 as booked " +
                     "FROM interested i " +
                     "JOIN workspace w ON i.workspace = w.id " +
                     "JOIN company c ON w.company_id = c.id " +
