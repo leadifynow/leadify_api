@@ -191,10 +191,24 @@ public class BookedDao {
             return new ApiResponse<>("Error creating booked", null, 500);
         }
     }
-    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize) {
+    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize, int filterType) {
         try {
+            // Construct base SQL query without filter
+            String baseSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+
+            // Construct SQL query based on filterType parameter
+            String countSql;
+            if (filterType == 1) {
+                countSql = baseSql;
+            } else if (filterType == 2) {
+                countSql = baseSql + " AND interested_id IS NOT NULL";
+            } else if (filterType == 3) {
+                countSql = baseSql + " AND interested_id IS NULL";
+            } else {
+                throw new IllegalArgumentException("Invalid filterType: " + filterType);
+            }
+
             // Query to count total bookings
-            String countSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL)";
             int totalItems = jdbcTemplate.queryForObject(countSql, Integer.class, companyId, workspaceId);
 
             // Calculate total pages
@@ -213,10 +227,24 @@ public class BookedDao {
             // Calculate offset
             int offset = (page - 1) * pageSize;
 
-            // Query to retrieve paginated bookings with ordering
-            String sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
-                    "ORDER BY CASE WHEN interested_id IS NULL THEN 0 ELSE 1 END ASC, created_at DESC " +
-                    "LIMIT ? OFFSET ?";
+            // Construct SQL query based on filterType parameter for retrieving paginated bookings
+            String sql;
+            if (filterType == 1) {
+                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
+                        "LIMIT ? OFFSET ?";
+            } else if (filterType == 2) {
+                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
+                        "AND interested_id IS NOT NULL " +
+                        "LIMIT ? OFFSET ?";
+            } else if (filterType == 3) {
+                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
+                        "AND interested_id IS NULL " +
+                        "LIMIT ? OFFSET ?";
+            } else {
+                throw new IllegalArgumentException("Invalid filterType: " + filterType);
+            }
+
+            // Retrieve paginated bookings based on the constructed SQL query
             List<Booked> bookedList = jdbcTemplate.query(sql, new Object[]{companyId, workspaceId, pageSize, offset},
                     new BeanPropertyRowMapper<>(Booked.class));
 

@@ -2,6 +2,7 @@ package com.api.leadify.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +23,15 @@ public class Booked {
     private String referral;
     private String meeting_date;
     private String notes;
+    private Timestamp created_at;
+
+    public Timestamp getCreated_at() {
+        return created_at;
+    }
+
+    public void setCreated_at(Timestamp created_at) {
+        this.created_at = created_at;
+    }
 
     public String getNotes() {
         return notes;
