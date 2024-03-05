@@ -231,14 +231,17 @@ public class BookedDao {
             String sql;
             if (filterType == 1) {
                 sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
+                        "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
                         "LIMIT ? OFFSET ?";
             } else if (filterType == 2) {
                 sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
                         "AND interested_id IS NOT NULL " +
+                        "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
                         "LIMIT ? OFFSET ?";
             } else if (filterType == 3) {
                 sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
                         "AND interested_id IS NULL " +
+                        "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
                         "LIMIT ? OFFSET ?";
             } else {
                 throw new IllegalArgumentException("Invalid filterType: " + filterType);
