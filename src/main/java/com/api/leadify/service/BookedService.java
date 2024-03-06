@@ -29,7 +29,7 @@ public class BookedService {
     public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId) {
         return bookedDao.searchBookedRecords(searchTerm, companyId);
     }
-    public ApiResponse<Void> updateBookedAndInterested(int interestedId, int bookedId) {
+    public ApiResponse<Booked> updateBookedAndInterested(int interestedId, int bookedId) {
         return bookedDao.updateBookedAndInterested(interestedId, bookedId);
     }
     public ApiResponse<Interested> getInterestedByBookedId(int bookedId) {

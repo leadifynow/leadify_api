@@ -285,7 +285,7 @@ public class BookedDao {
             return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-    public ApiResponse<Void> updateBookedAndInterested(int interestedId, int bookedId) {
+    public ApiResponse<Booked> updateBookedAndInterested(int interestedId, int bookedId) {
         try {
             // Update interested_id in the booked table
             String updateBookedSql = "UPDATE booked SET interested_id = ? WHERE id = ?";
@@ -296,7 +296,15 @@ public class BookedDao {
             int updatedInterestedRows = jdbcTemplate.update(updateInterestedSql, interestedId);
 
             if (updatedBookedRows > 0 && updatedInterestedRows > 0) {
-                return new ApiResponse<>("Booked and interested records updated successfully", null, 200);
+                // Query the updated record from the booked table
+                String selectBookedSql = "SELECT * FROM booked WHERE id = ?";
+                Booked updatedBooked = jdbcTemplate.queryForObject(selectBookedSql, new Object[]{bookedId}, new BeanPropertyRowMapper<>(Booked.class));
+
+                if (updatedBooked != null) {
+                    return new ApiResponse<>("Booked and interested records updated successfully", updatedBooked, 200);
+                } else {
+                    return new ApiResponse<>("Failed to retrieve updated booked record", null, 500);
+                }
             } else {
                 return new ApiResponse<>("No records updated", null, 404);
             }

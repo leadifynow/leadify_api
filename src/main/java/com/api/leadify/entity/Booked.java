@@ -18,7 +18,6 @@ public class Booked {
     private Integer company_id;
     private String workspace_id;
     private String event_name;
-
     private String business;
     private String referral;
     private String meeting_date;

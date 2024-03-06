@@ -36,7 +36,7 @@ public class BookedController {
         return bookedService.searchBookedRecords(searchTerm, companyId);
     }
     @PutMapping("/update/{interestedId}/{bookedId}")
-    public ApiResponse<Void> updateBookedAndInterested(@PathVariable int interestedId, @PathVariable int bookedId) {
+    public ApiResponse<Booked> updateBookedAndInterested(@PathVariable int interestedId, @PathVariable int bookedId) {
         return bookedService.updateBookedAndInterested(interestedId, bookedId);
     }
     @GetMapping("/getInterestedByBookedId/{bookedId}")
