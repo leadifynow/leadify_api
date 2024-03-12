@@ -4,6 +4,7 @@ import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.UserDao;
 import com.api.leadify.entity.Company;
 import com.api.leadify.entity.User;
+import com.api.leadify.entity.UserToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,7 @@ public class UserService {
     public ApiResponse<List<User>> getUsers() {
         return userDao.getUsers();
     }
-    public ApiResponse<User> loginUser(User user) {
+    public ApiResponse<UserToken> loginUser(User user) {
         return userDao.loginUser(user);
     }
     public ApiResponse<List<Company>> getUserCompanies(Integer userId) {

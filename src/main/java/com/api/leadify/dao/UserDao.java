@@ -2,12 +2,15 @@ package com.api.leadify.dao;
 
 import com.api.leadify.entity.Company;
 import com.api.leadify.entity.User;
+import com.api.leadify.entity.UserToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import com.api.leadify.jwt.JWT;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -123,19 +126,21 @@ public class UserDao {
             return new ApiResponse<>("Error retrieving users", null, 500);
         }
     }
-    public ApiResponse<User> loginUser(User user) {
+    public ApiResponse<UserToken> loginUser(User user) {
         String sql = "SELECT id, first_name, last_name, email, type_id FROM user WHERE email = ? AND password = ?";
         try {
             Map<String, Object> result = jdbcTemplate.queryForMap(sql, user.getEmail(), user.getPassword());
 
-            User loggedInUser = new User();
+            UserToken loggedInUser = new UserToken(); // Use UserToken directly
             loggedInUser.setId((Integer) result.get("id"));
             loggedInUser.setFirst_name((String) result.get("first_name"));
             loggedInUser.setLast_name((String) result.get("last_name"));
             loggedInUser.setEmail((String) result.get("email"));
             loggedInUser.setType_id((Integer) result.get("type_id"));
+            String token = JWT.getJWTToken((String) result.get("email"), (Integer) result.get("id"));
+            loggedInUser.setToken(token); // Set the token
 
-            return new ApiResponse<>("Login successful", loggedInUser, 200);
+            return new ApiResponse<>("Welcome back " + result.get("email") + "!", loggedInUser, 200);
         } catch (EmptyResultDataAccessException e) {
             // User not found
         }

@@ -3,6 +3,7 @@ package com.api.leadify.controller;
 import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.entity.Company;
 import com.api.leadify.entity.User;
+import com.api.leadify.entity.UserToken;
 import com.api.leadify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -38,7 +39,7 @@ public class UserController {
     }
     @PostMapping(value = "/login", produces = "application/json")
     @ResponseBody
-    public ApiResponse<User> login(@RequestBody User user) {
+    public ApiResponse<UserToken> login(@RequestBody User user) {
         return userService.loginUser(user);
     }
     @GetMapping("/getUserCompanies/{userId}")
