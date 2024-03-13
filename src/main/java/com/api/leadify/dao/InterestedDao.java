@@ -21,16 +21,8 @@ import org.slf4j.LoggerFactory;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.Collections;
-import java.util.Comparator;
+import java.time.*;
+import java.util.*;
 
 @Repository
 public class InterestedDao {
@@ -171,8 +163,8 @@ public class InterestedDao {
         // Get the generated interested_id
         int interestedId = keyHolder.getKey().intValue();
         // Check if the email exists in the booked table
-        String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ?";
-        int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, leadEmail);
+        String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+        int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, leadEmail, interested.getWorkspace().toString());
 
         if (emailExistsInBooked > 0) {
             // If the email exists in booked table, update booked status to 1
@@ -207,8 +199,8 @@ public class InterestedDao {
                 // Check if the next_update is today's date, null, or in the past,
                 // and the stage is not "Not a Fit", "Completed", "Phone Call", or "Other"
                 if ((interested.getNext_update() == null
-                        || isNextUpdateToday(interested.getNext_update())
-                        || isNextUpdateInThePast(interested.getNext_update()))
+                        || isNextUpdateToday(new Date(interested.getNext_update().getTime()))
+                        || isNextUpdateInThePast(new Date(interested.getNext_update().getTime())))
                         && (interested.getStage_id() == null
                         || !isStageName(interested.getStage_id(), workspaceId, "Not a Fit"))
                         && (interested.getStage_id() == null
@@ -217,11 +209,20 @@ public class InterestedDao {
                         || !isStageName(interested.getStage_id(), workspaceId, "Phone Call"))
                         && (interested.getStage_id() == null
                         || !isStageName(interested.getStage_id(), workspaceId, "Other"))) {
-
                     // Add the interested item to the valid list
                     validInterestedList.add(interested);
                 }
             }
+
+//            // Convert Timestamps to Dates
+//            for (Interested interested : validInterestedList) {
+//                if (interested.getCreated_at() != null) {
+//                    interested.setCreated_at(new Date(interested.getCreated_at().getTime()));
+//                }
+//                if (interested.getNext_update() != null) {
+//                    interested.setNext_update(new Date(interested.getNext_update().getTime()));
+//                }
+//            }
 
             // Calculate total items after applying the filters
             int totalItems = validInterestedList.size();
@@ -265,23 +266,25 @@ public class InterestedDao {
             return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
+
     private boolean isStageName(int stageId, UUID workspaceId, String stageName) {
         int stageIdFromDB = getStageIdForName(stageName, workspaceId);
         return stageId == stageIdFromDB;
     }
-    private boolean isNextUpdateInThePast(Timestamp nextUpdateTimestamp) {
-        if (nextUpdateTimestamp == null) {
+    private boolean isNextUpdateInThePast(Date nextUpdateDate) {
+        if (nextUpdateDate == null) {
             return false; // Treat null as future date
         }
-        LocalDate nextUpdateDate = nextUpdateTimestamp.toLocalDateTime().toLocalDate();
-        return nextUpdateDate.isBefore(LocalDate.now());
+        LocalDate nextUpdateLocalDate = nextUpdateDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return nextUpdateLocalDate.isBefore(LocalDate.now());
     }
-    private boolean isNextUpdateToday(Timestamp nextUpdateTimestamp) {
-        if (nextUpdateTimestamp == null) {
+
+    private boolean isNextUpdateToday(Date nextUpdateDate) {
+        if (nextUpdateDate == null) {
             return true; // Treat null as today
         }
-        LocalDate nextUpdateDate = nextUpdateTimestamp.toLocalDateTime().toLocalDate();
-        return nextUpdateDate.isEqual(LocalDate.now());
+        LocalDate nextUpdateLocalDate = nextUpdateDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return nextUpdateLocalDate.isEqual(LocalDate.now());
     }
     private int getStageIdForName(String stageName, UUID workspaceId) {
         try {
@@ -475,10 +478,9 @@ public class InterestedDao {
             // Get the generated interested_id
             String getInterestedIdQuery = "SELECT LAST_INSERT_ID()";
             int interestedId = jdbcTemplate.queryForObject(getInterestedIdQuery, Integer.class);
-
             // Check if the email exists in the booked table
-            String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ?";
-            int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, interested.getLead_email());
+            String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+            int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, interested.getLead_email(), interested.getWorkspace().toString());
             Boolean updateHappen = false;
             if (emailExistsInBooked > 0) {
                 // If the email exists in booked table, update booked status to 1

@@ -103,12 +103,14 @@ public class BookedDao {
             System.out.println(workspaceId);
 
             // Check if the email exists in the interested table
-            String interestedIdQuery = "SELECT id FROM interested WHERE lead_email = ?";
+            String interestedIdQuery = "SELECT id FROM interested WHERE lead_email = ? AND (workspace = ? OR workspace IS NULL)";
             Integer interestedId;
             try {
-                interestedId = jdbcTemplate.queryForObject(interestedIdQuery, Integer.class, email);
-                String updateInterestedSql = "UPDATE interested SET booked = 1 WHERE id = ?";
-                jdbcTemplate.update(updateInterestedSql, interestedId);
+                interestedId = jdbcTemplate.queryForObject(interestedIdQuery, Integer.class, email, workspaceId);
+                if (interestedId > 0) {
+                    String updateInterestedSql = "UPDATE interested SET booked = 1 WHERE id = ?";
+                    jdbcTemplate.update(updateInterestedSql, interestedId);
+                }
             } catch (EmptyResultDataAccessException e) {
                 interestedId = null;
             }
@@ -411,11 +413,11 @@ public class BookedDao {
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
             Date parsedDate = dateFormat.parse(booked.getMeeting_date());
             Timestamp meetingTimestamp = new Timestamp(parsedDate.getTime());
-            String check = "SELECT id FROM interested where lead_email = ?";
+            String check = "SELECT id FROM interested where lead_email = ? AND (workspace = ? OR workspace IS NULL)";
             Boolean updateHappen = false;
             Integer interestedId = null;
             try {
-                interestedId = jdbcTemplate.queryForObject(check, Integer.class, booked.getEmail());
+                interestedId = jdbcTemplate.queryForObject(check, Integer.class, booked.getEmail(), booked.getWorkspace_id());
                 if (interestedId != null) {
                     String queryToUpdateInterested = "UPDATE interested SET booked = 1 WHERE id = ?";
                     jdbcTemplate.update(queryToUpdateInterested, interestedId);
