@@ -23,7 +23,7 @@ public class Filtro implements Filter {
         log.info("ENTRY::-> doFilter");
 
         ((HttpServletResponse) response).addHeader("Access-Control-Allow-Origin", "*");
-        ((HttpServletResponse) response).addHeader("Access-Control-Allow-Methods","GET, OPTIONS, HEAD, PUT, POST");
+        ((HttpServletResponse) response).addHeader("Access-Control-Allow-Methods","GET, OPTIONS, HEAD, PUT, POST, DELETE");
         ((HttpServletResponse) response).setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
         ((HttpServletResponse) response).setHeader("Access-Control-Allow-Headers", "*");
         ((HttpServletResponse) response).setHeader("Access-Control-Allow-Credentials", "true");
