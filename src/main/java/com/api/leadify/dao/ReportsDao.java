@@ -7,6 +7,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Repository
@@ -23,13 +26,15 @@ public class ReportsDao {
         String totalBookedMatchedQuery = "SELECT COUNT(*) FROM booked WHERE interested_id IS NOT NULL AND workspace_id = ? AND created_at BETWEEN ? AND ?";
         String uniqueEmailBookedMatchQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE interested_id IS NOT NULL AND workspace_id = ? AND created_at BETWEEN ? AND ?";
         String totalInterestedAndBookedNonMatchedQuery = "SELECT COUNT(*) FROM booked WHERE interested_id IS NULL AND workspace_id = ? AND created_at BETWEEN ? AND ?";
-        String totalBookedQuery = "SELECT COUNT(*) FROM booked WHERE workspace_id = ? AND created_at BETWEEN ? AND ?";
-        String uniqueEmailGeneralQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE workspace_id = ? AND created_at BETWEEN ? AND ?";
+        String totalBookedQuery = "SELECT COUNT(*) FROM booked WHERE created_at BETWEEN ? AND ?";
+        String uniqueEmailGeneralQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE created_at BETWEEN ? AND ?";
         String workspaceNameQuery = "SELECT name FROM workspace WHERE id = ?";
-        String allCallsQuery = "SELECT COUNT(*) FROM booked WHERE workspace_id = ? AND meeting_date BETWEEN ? AND ?";
+        String allCallsQuery = "SELECT COUNT(*) FROM booked WHERE meeting_date BETWEEN ? AND ?";
         String allCallsBookedQuery = "SELECT COUNT(*) FROM booked WHERE workspace_id = ? AND interested_id IS NOT NULL AND meeting_date BETWEEN ? AND ?";
+        String allInterestedQuery = "SELECT COUNT(*) FROM interested WHERE created_at BETWEEN ? AND ?";
 
-
+// los generales no deben tener validacion por workspace_id
+        // no leadify sino como el workspace
         Integer totalInterested = null;
         Integer totalBookedMatched = null;
         Integer uniqueEmailsBookedMatched = null;
@@ -39,17 +44,31 @@ public class ReportsDao {
         String workpsaceName = null;
         Integer allCalls = null;
         Integer allCallsBooked = null;
+        Integer allInterested = null;
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+
+// Set time to 00:00:00.000 for both start and end dates
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+
+        System.out.println(startDate);
+        System.out.println(endDate);
 
         try {
             workpsaceName = jdbcTemplate.queryForObject(workspaceNameQuery, String.class, workspace);
-            totalInterested = jdbcTemplate.queryForObject(totalInterestedQuery, Integer.class, workspace, dates[0], dates[1]);
-            totalBookedMatched = jdbcTemplate.queryForObject(totalBookedMatchedQuery, Integer.class, workspace, dates[0], dates[1]);
-            uniqueEmailsBookedMatched = jdbcTemplate.queryForObject(uniqueEmailBookedMatchQuery, Integer.class, workspace, dates[0], dates[1]);
-            totalInterestedAndBookedNonMatched = jdbcTemplate.queryForObject(totalInterestedAndBookedNonMatchedQuery, Integer.class, workspace, dates[0], dates[1]);
-            totalBooked = jdbcTemplate.queryForObject(totalBookedQuery, Integer.class, workspace, dates[0], dates[1]);
-            uniqueEmailGeneral = jdbcTemplate.queryForObject(uniqueEmailGeneralQuery, Integer.class, workspace, dates[0], dates[1]);
-            allCalls = jdbcTemplate.queryForObject(allCallsQuery, Integer.class, workspace, dates[0], dates[1]);
-            allCallsBooked = jdbcTemplate.queryForObject(allCallsBookedQuery, Integer.class, workspace, dates[0], dates[1]);
+            totalInterested = jdbcTemplate.queryForObject(totalInterestedQuery, Integer.class, workspace, startDate, endDate);
+            totalBookedMatched = jdbcTemplate.queryForObject(totalBookedMatchedQuery, Integer.class, workspace, startDate, endDate);
+            uniqueEmailsBookedMatched = jdbcTemplate.queryForObject(uniqueEmailBookedMatchQuery, Integer.class, workspace, startDate, endDate);
+            totalInterestedAndBookedNonMatched = jdbcTemplate.queryForObject(totalInterestedAndBookedNonMatchedQuery, Integer.class, workspace, startDate, endDate);
+            totalBooked = jdbcTemplate.queryForObject(totalBookedQuery, Integer.class, startDate, endDate);
+            uniqueEmailGeneral = jdbcTemplate.queryForObject(uniqueEmailGeneralQuery, Integer.class, startDate, endDate);
+            allCalls = jdbcTemplate.queryForObject(allCallsQuery, Integer.class, startDate, endDate);
+            allCallsBooked = jdbcTemplate.queryForObject(allCallsBookedQuery, Integer.class, workspace, startDate, endDate);
+            allInterested = jdbcTemplate.queryForObject(allInterestedQuery, Integer.class, startDate, endDate);
+
         } catch (Exception e) {
             // Handle any exceptions here
             e.printStackTrace();
@@ -62,7 +81,7 @@ public class ReportsDao {
         double callsPercentage = ((double) allCallsBooked / allCalls) * 100;
 
         Report reportGeneral = new Report();
-        reportGeneral.setLeads(totalInterested + totalInterestedAndBookedNonMatched);
+        reportGeneral.setLeads(allInterested);
         reportGeneral.setBooked(totalBooked);
         reportGeneral.setUniqueEmails(uniqueEmailGeneral);
         reportGeneral.setMeets(allCalls);
@@ -73,7 +92,7 @@ public class ReportsDao {
         report.setBooked(totalBookedMatched);
         report.setUniqueEmails(uniqueEmailsBookedMatched);
         report.setMeets(allCallsBooked);
-        report.setName("Leadify");
+        report.setName(workpsaceName);
 
         Report reportPercentage = new Report();
         reportPercentage.setLeads(leadsPercentage);
