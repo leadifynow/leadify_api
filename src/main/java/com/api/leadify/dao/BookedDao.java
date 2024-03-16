@@ -99,17 +99,21 @@ public class BookedDao {
             } else {
                 return new ApiResponse<>("Invalid event name", null, 400);
             }
-            System.out.println(booked);
-            System.out.println(workspaceId);
 
             // Check if the email exists in the interested table
-            String interestedIdQuery = "SELECT id FROM interested WHERE lead_email = ? AND (workspace = ? OR workspace IS NULL)";
+            System.out.println(email + "email");
+            System.out.println(workspaceId + "workspace");
+            String interestedIdQuery = "SELECT id FROM interested WHERE lead_email = ? AND booked = 0";
             Integer interestedId;
             try {
-                interestedId = jdbcTemplate.queryForObject(interestedIdQuery, Integer.class, email, workspaceId);
+                interestedId = jdbcTemplate.queryForObject(interestedIdQuery, Integer.class, email);
                 if (interestedId > 0) {
+                    String workspaceQuery = "SELECT workspace from interested where id = ?";
+                    UUID workspace = UUID.fromString(jdbcTemplate.queryForObject(workspaceQuery, String.class, interestedId));
+                    System.out.println("worksapce: " + workspace);
                     String updateInterestedSql = "UPDATE interested SET booked = 1 WHERE id = ?";
                     jdbcTemplate.update(updateInterestedSql, interestedId);
+                    workspaceId = workspace;
                 }
             } catch (EmptyResultDataAccessException e) {
                 interestedId = null;
