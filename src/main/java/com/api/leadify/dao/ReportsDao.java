@@ -75,7 +75,7 @@ public class ReportsDao {
             return new ApiResponse<>("Couldn't generate report", null, 500);
         }
 
-        double leadsPercentage = ((double) totalInterested / (totalInterested + totalInterestedAndBookedNonMatched)) * 100;
+        double leadsPercentage = ((double) totalInterested / allInterested * 100);
         double bookedPercentage = ((double) totalBookedMatched / totalBooked) * 100;
         double uniqueEmailsPercentage = ((double) uniqueEmailsBookedMatched / uniqueEmailGeneral) * 100;
         double callsPercentage = ((double) allCallsBooked / allCalls) * 100;
