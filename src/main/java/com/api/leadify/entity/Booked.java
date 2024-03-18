@@ -23,6 +23,15 @@ public class Booked {
     private String meeting_date;
     private String notes;
     private Timestamp created_at;
+    private String publicist;
+
+    public String getPublicist() {
+        return publicist;
+    }
+
+    public void setPublicist(String publicist) {
+        this.publicist = publicist;
+    }
 
     public Timestamp getCreated_at() {
         return created_at;
