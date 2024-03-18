@@ -137,28 +137,34 @@ public class InterestedDao {
         String insertQuery = "INSERT INTO interested (event_type, workspace, campaign_id, campaign_name, lead_email, title, email, " +
                 "website, industry, lastName, firstName, number_of_employees, companyName, linkedin_url, stage_id, booked) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
-            ps.setString(1, interested.getEvent_type());
-            ps.setString(2, interested.getWorkspace().toString());
-            ps.setString(3, interested.getCampaign_id().toString());
-            ps.setString(4, interested.getCampaign_name());
-            ps.setString(5, interested.getLead_email());
-            ps.setString(6, interested.getTitle());
-            ps.setString(7, interested.getEmail());
-            ps.setString(8, interested.getWebsite());
-            ps.setString(9, interested.getIndustry());
-            ps.setString(10, interested.getLastName());
-            ps.setString(11, interested.getFirstName());
-            ps.setString(12, interested.getNumber_of_employees());
-            ps.setString(13, interested.getCompanyName());
-            ps.setString(14, interested.getLinkedin_url());
-            ps.setObject(15, null); // interested.getStage_id()
-            ps.setInt(16, 0); // booked status initially set to 0
-            return ps;
-        }, keyHolder);
+
+        try {
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
+                ps.setString(1, interested.getEvent_type());
+                ps.setString(2, interested.getWorkspace().toString());
+                ps.setString(3, interested.getCampaign_id().toString());
+                ps.setString(4, interested.getCampaign_name());
+                ps.setString(5, interested.getLead_email());
+                ps.setString(6, interested.getTitle());
+                ps.setString(7, interested.getEmail());
+                ps.setString(8, interested.getWebsite());
+                ps.setString(9, interested.getIndustry());
+                ps.setString(10, interested.getLastName());
+                ps.setString(11, interested.getFirstName());
+                ps.setString(12, interested.getNumber_of_employees());
+                ps.setString(13, interested.getCompanyName());
+                ps.setString(14, interested.getLinkedin_url());
+                ps.setObject(15, null); // interested.getStage_id()
+                ps.setInt(16, 0); // booked status initially set to 0
+                return ps;
+            }, keyHolder);
+        } catch (DataAccessException e) {
+            // Log the exception or handle it as required
+            // You can throw a custom exception with an error message
+            throw new RuntimeException("Failed to insert data into the database: " + e.getMessage());
+        }
 
         // Get the generated interested_id
         int interestedId = keyHolder.getKey().intValue();
