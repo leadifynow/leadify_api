@@ -52,7 +52,7 @@ public class ReportsDao {
 
 // Set time to 00:00:00.000 for both start and end dates
         startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
-        endDate = endDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
 
         System.out.println(startDate);
         System.out.println(endDate);
