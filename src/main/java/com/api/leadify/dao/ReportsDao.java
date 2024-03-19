@@ -10,7 +10,10 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public class ReportsDao {
@@ -32,33 +35,32 @@ public class ReportsDao {
         String allCallsQuery = "SELECT COUNT(*) FROM booked WHERE meeting_date BETWEEN ? AND ?";
         String allCallsBookedQuery = "SELECT COUNT(*) FROM booked WHERE workspace_id = ? AND interested_id IS NOT NULL AND meeting_date BETWEEN ? AND ?";
         String allInterestedQuery = "SELECT COUNT(*) FROM interested WHERE created_at BETWEEN ? AND ?";
+        String stagesQuery = "SELECT id, name FROM stage WHERE workspace_id = ? ORDER BY position_workspace";
+        String campaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM interested WHERE workspace = ? AND created_at BETWEEN ? AND ? GROUP BY campaign_name";
 
-// los generales no deben tener validacion por workspace_id
-        // no leadify sino como el workspace
         Integer totalInterested = null;
         Integer totalBookedMatched = null;
         Integer uniqueEmailsBookedMatched = null;
         Integer totalInterestedAndBookedNonMatched = null;
         Integer totalBooked = null;
         Integer uniqueEmailGeneral = null;
-        String workpsaceName = null;
+        String workspaceName = null;
         Integer allCalls = null;
         Integer allCallsBooked = null;
         Integer allInterested = null;
 
+        List<Map<String, Object>> campaignDataList = new ArrayList<>();
+        List<Map<String, Object>> stageDataList = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
         LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
 
-// Set time to 00:00:00.000 for both start and end dates
+        // Set time to 00:00:00.000 for both start and end dates
         startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
         endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
 
-        System.out.println(startDate);
-        System.out.println(endDate);
-
         try {
-            workpsaceName = jdbcTemplate.queryForObject(workspaceNameQuery, String.class, workspace);
+            workspaceName = jdbcTemplate.queryForObject(workspaceNameQuery, String.class, workspace);
             totalInterested = jdbcTemplate.queryForObject(totalInterestedQuery, Integer.class, workspace, startDate, endDate);
             totalBookedMatched = jdbcTemplate.queryForObject(totalBookedMatchedQuery, Integer.class, workspace, startDate, endDate);
             uniqueEmailsBookedMatched = jdbcTemplate.queryForObject(uniqueEmailBookedMatchQuery, Integer.class, workspace, startDate, endDate);
@@ -69,8 +71,46 @@ public class ReportsDao {
             allCallsBooked = jdbcTemplate.queryForObject(allCallsBookedQuery, Integer.class, workspace, startDate, endDate);
             allInterested = jdbcTemplate.queryForObject(allInterestedQuery, Integer.class, startDate, endDate);
 
+            // Fetch stage data
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(stagesQuery, workspace);
+            for (Map<String, Object> row : rows) {
+                Integer stageId = (Integer) row.get("id");
+                String stageName = (String) row.get("name");
+                // Count interested per stage
+                Integer interestedPerStage = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested WHERE workspace = ? AND stage_id = ? AND created_at BETWEEN ? AND ?", Integer.class, workspace, stageId, startDate, endDate);
+                Map<String, Object> stageData = new HashMap<>();
+                stageData.put("stageName", stageName);
+                stageData.put("interestedCount", interestedPerStage);
+                stageDataList.add(stageData);
+            }
+            Integer interestedNullStage = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested WHERE workspace = ? AND stage_id IS NULL AND created_at BETWEEN ? AND ?", Integer.class, workspace, startDate, endDate);
+            if (interestedNullStage != null && interestedNullStage > 0) {
+                Map<String, Object> nullStageData = new HashMap<>();
+                nullStageData.put("stageName", "Not in stage");
+                nullStageData.put("interestedCount", interestedNullStage);
+                stageDataList.add(nullStageData);
+            }
+
+            List<Map<String, Object>> campaignRows = jdbcTemplate.queryForList(campaignQuery, workspace, startDate, endDate);
+            for (Map<String, Object> row : campaignRows) {
+                String campaignName = (String) row.get("campaign_name");
+                Integer interestedCount = ((Number) row.get("count")).intValue();
+                Map<String, Object> campaignData = new HashMap<>();
+                campaignData.put("campaignName", campaignName != null ? campaignName : "Not specified");
+                campaignData.put("interestedCount", interestedCount);
+                campaignDataList.add(campaignData);
+            }
+
+            // Fetch count of interested where campaign_name is null
+            Integer interestedNullCampaign = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested WHERE workspace = ? AND campaign_name IS NULL AND created_at BETWEEN ? AND ?", Integer.class, workspace, startDate, endDate);
+            if (interestedNullCampaign != null && interestedNullCampaign > 0) {
+                Map<String, Object> nullCampaignData = new HashMap<>();
+                nullCampaignData.put("campaignName", "Not specified");
+                nullCampaignData.put("interestedCount", interestedNullCampaign);
+                campaignDataList.add(nullCampaignData);
+            }
+
         } catch (Exception e) {
-            // Handle any exceptions here
             e.printStackTrace();
             return new ApiResponse<>("Couldn't generate report", null, 500);
         }
@@ -92,7 +132,7 @@ public class ReportsDao {
         report.setBooked(totalBookedMatched);
         report.setUniqueEmails(uniqueEmailsBookedMatched);
         report.setMeets(allCallsBooked);
-        report.setName(workpsaceName);
+        report.setName(workspaceName);
 
         Report reportPercentage = new Report();
         reportPercentage.setLeads(leadsPercentage);
@@ -103,7 +143,9 @@ public class ReportsDao {
 
         List<Report> reports = List.of(reportGeneral, report, reportPercentage);
 
-        ReportResponse reportResponse = new ReportResponse(reports, workpsaceName);
+        ReportResponse reportResponse = new ReportResponse(reports, workspaceName, stageDataList, campaignDataList);
+        reportResponse.calculateCampaignPercentages(totalInterested);
         return new ApiResponse<>("success", reportResponse, 200);
     }
 }
+
