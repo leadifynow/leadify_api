@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
+import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,6 +38,7 @@ public class ReportsDao {
         String allInterestedQuery = "SELECT COUNT(*) FROM interested WHERE created_at BETWEEN ? AND ?";
         String stagesQuery = "SELECT id, name FROM stage WHERE workspace_id = ? ORDER BY position_workspace";
         String campaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM interested WHERE workspace = ? AND created_at BETWEEN ? AND ? GROUP BY campaign_name";
+        String appointmentsByCampaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM booked b INNER JOIN interested i ON b.interested_id = i.id WHERE i.workspace = ? AND interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? GROUP BY campaign_name";
 
         Integer totalInterested = null;
         Integer totalBookedMatched = null;
@@ -48,12 +50,12 @@ public class ReportsDao {
         Integer allCalls = null;
         Integer allCallsBooked = null;
         Integer allInterested = null;
-
         List<Map<String, Object>> campaignDataList = new ArrayList<>();
         List<Map<String, Object>> stageDataList = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
         LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        List<Map<String, Object>> appointmentsByCampaignList = new ArrayList<>();
 
         // Set time to 00:00:00.000 for both start and end dates
         startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -110,6 +112,25 @@ public class ReportsDao {
                 campaignDataList.add(nullCampaignData);
             }
 
+            // Logic for appointments by campaign
+            List<Map<String, Object>> appointmentsByCampaignRows = jdbcTemplate.queryForList(appointmentsByCampaignQuery, workspace, startDate, endDate);
+            for (Map<String, Object> row : appointmentsByCampaignRows) {
+                String campaignName = (String) row.get("campaign_name");
+                Integer appointmentCount = ((Number) row.get("count")).intValue();
+                Map<String, Object> appointmentData = new HashMap<>();
+                appointmentData.put("campaignName", campaignName != null ? campaignName : "Not specified");
+                appointmentData.put("appointmentCount", appointmentCount);
+                appointmentsByCampaignList.add(appointmentData);
+            }
+            // Calculate percentages for appointments by campaign
+            for (Map<String, Object> appointment : appointmentsByCampaignList) {
+                int appointmentCount = (int) appointment.get("appointmentCount");
+                double percentage = ((double) appointmentCount / allInterested) * 100;
+                DecimalFormat df = new DecimalFormat("#.##");
+                String formattedPercentage = df.format(percentage) + "%";
+                appointment.put("percentage", formattedPercentage);
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
             return new ApiResponse<>("Couldn't generate report", null, 500);
@@ -143,7 +164,7 @@ public class ReportsDao {
 
         List<Report> reports = List.of(reportGeneral, report, reportPercentage);
 
-        ReportResponse reportResponse = new ReportResponse(reports, workspaceName, stageDataList, campaignDataList);
+        ReportResponse reportResponse = new ReportResponse(reports, workspaceName, stageDataList, campaignDataList, appointmentsByCampaignList);
         reportResponse.calculateCampaignPercentages(totalInterested);
         return new ApiResponse<>("success", reportResponse, 200);
     }
