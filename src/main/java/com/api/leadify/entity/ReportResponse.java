@@ -10,13 +10,15 @@ public class ReportResponse {
     private List<Map<String, Object>> stageData;
     private List<Map<String, Object>> campaignData;
     private List<Map<String, Object>> appointmentsByCampaignData;
+    private List<Map<String, Object>> emailOccurrences;
 
-    public ReportResponse(List<Report> reports, String workspace, List<Map<String, Object>> stageData, List<Map<String, Object>> campaignData, List<Map<String, Object>> appointmentsByCampaignData) {
+    public ReportResponse(List<Report> reports, String workspace, List<Map<String, Object>> stageData, List<Map<String, Object>> campaignData, List<Map<String, Object>> appointmentsByCampaignData, List<Map<String, Object>> emailOccurrences) {
         this.reports = reports;
         this.workspace = workspace;
         this.stageData = stageData;
         this.campaignData = campaignData;
         this.appointmentsByCampaignData = appointmentsByCampaignData;
+        this.emailOccurrences = emailOccurrences;
     }
 
     public List<Report> getReports() {
@@ -57,6 +59,14 @@ public class ReportResponse {
 
     public void setAppointmentsByCampaignData(List<Map<String, Object>> appointmentsByCampaignData) {
         this.appointmentsByCampaignData = appointmentsByCampaignData;
+    }
+
+    public List<Map<String, Object>> getEmailOccurrences() {
+        return emailOccurrences;
+    }
+
+    public void setEmailOccurrences(List<Map<String, Object>> emailOccurrences) {
+        this.emailOccurrences = emailOccurrences;
     }
 
     // Method to calculate the percentage for each campaign data

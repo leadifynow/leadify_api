@@ -39,6 +39,7 @@ public class ReportsDao {
         String stagesQuery = "SELECT id, name FROM stage WHERE workspace_id = ? ORDER BY position_workspace";
         String campaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM interested WHERE workspace = ? AND created_at BETWEEN ? AND ? GROUP BY campaign_name";
         String appointmentsByCampaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM booked b INNER JOIN interested i ON b.interested_id = i.id WHERE i.workspace = ? AND interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? GROUP BY campaign_name";
+        String emailOccurrencesQuery = "SELECT email, COUNT(*) AS count FROM booked WHERE workspace_id = ? AND created_at BETWEEN ? AND ? GROUP BY email";
 
         Integer totalInterested = null;
         Integer totalBookedMatched = null;
@@ -56,6 +57,7 @@ public class ReportsDao {
         LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
         LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
         List<Map<String, Object>> appointmentsByCampaignList = new ArrayList<>();
+        List<Map<String, Object>> emailOccurrencesOutputList = new ArrayList<>();
 
         // Set time to 00:00:00.000 for both start and end dates
         startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -72,6 +74,41 @@ public class ReportsDao {
             allCalls = jdbcTemplate.queryForObject(allCallsQuery, Integer.class, startDate, endDate);
             allCallsBooked = jdbcTemplate.queryForObject(allCallsBookedQuery, Integer.class, workspace, startDate, endDate);
             allInterested = jdbcTemplate.queryForObject(allInterestedQuery, Integer.class, startDate, endDate);
+
+            List<Map<String, Object>> emailOccurrencesRows = jdbcTemplate.queryForList(emailOccurrencesQuery, workspace, startDate, endDate);
+
+// Iterate through the email occurrences and calculate percentages
+            Map<Integer, Integer> emailOccurrencesMap = new HashMap<>();
+            for (Map<String, Object> emailOccurrence : emailOccurrencesRows) {
+                int occurrenceCount = ((Number) emailOccurrence.get("count")).intValue();
+
+                // Update the count for the occurrence in the map
+                emailOccurrencesMap.put(occurrenceCount, emailOccurrencesMap.getOrDefault(occurrenceCount, 0) + 1);
+            }
+
+// Clear the existing list
+            emailOccurrencesOutputList.clear();
+
+// Iterate through the map and add email occurrences to the list
+            for (Map.Entry<Integer, Integer> entry : emailOccurrencesMap.entrySet()) {
+                int occurrenceCount = entry.getKey();
+                int emailCount = entry.getValue();
+
+                // Create a new map entry for the email occurrence
+                Map<String, Object> emailOccurrenceData = new HashMap<>();
+                emailOccurrenceData.put("count", emailCount);
+                emailOccurrenceData.put("text", "Booked " + occurrenceCount + " time" + (occurrenceCount > 1 ? "s" : ""));
+
+                // Calculate percentage based on the total count of occurrences
+                double totalOccurrences = emailOccurrencesMap.values().stream().mapToInt(Integer::intValue).sum();
+                double percentage = ((double) emailCount / totalOccurrences) * 100;
+                DecimalFormat df = new DecimalFormat("#.##");
+                String formattedPercentage = df.format(percentage) + "%";
+                emailOccurrenceData.put("percentage", formattedPercentage);
+
+                // Add the email occurrence data to the list
+                emailOccurrencesOutputList.add(emailOccurrenceData);
+            }
 
             // Fetch stage data
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(stagesQuery, workspace);
@@ -164,7 +201,7 @@ public class ReportsDao {
 
         List<Report> reports = List.of(reportGeneral, report, reportPercentage);
 
-        ReportResponse reportResponse = new ReportResponse(reports, workspaceName, stageDataList, campaignDataList, appointmentsByCampaignList);
+        ReportResponse reportResponse = new ReportResponse(reports, workspaceName, stageDataList, campaignDataList, appointmentsByCampaignList, emailOccurrencesOutputList);
         reportResponse.calculateCampaignPercentages(totalInterested);
         return new ApiResponse<>("success", reportResponse, 200);
     }
