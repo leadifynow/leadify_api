@@ -12,15 +12,13 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
-import java.sql.PreparedStatement;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.sql.Types;
+import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Date;
 
 @Repository
 public class BookedDao {
@@ -200,7 +198,7 @@ public class BookedDao {
     public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize, int filterType) {
         try {
             // Construct base SQL query without filter
-            String baseSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+            String baseSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) and deleted = 0";
 
             // Construct SQL query based on filterType parameter
             String countSql;
@@ -236,16 +234,16 @@ public class BookedDao {
             // Construct SQL query based on filterType parameter for retrieving paginated bookings
             String sql;
             if (filterType == 1) {
-                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
+                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0 " +
                         "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
                         "LIMIT ? OFFSET ?";
             } else if (filterType == 2) {
-                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
+                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0" +
                         "AND interested_id IS NOT NULL " +
                         "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
                         "LIMIT ? OFFSET ?";
             } else if (filterType == 3) {
-                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) " +
+                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0" +
                         "AND interested_id IS NULL " +
                         "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
                         "LIMIT ? OFFSET ?";
@@ -363,8 +361,8 @@ public class BookedDao {
     }
     public ApiResponse<PaginatedResponse<List<Booked>>> findByCompanyIdAndWorkspaceId(int companyId, String workspaceId, String searchParam, int page, int pageSize) {
         try {
-            String countQuery = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL)";
-            String query = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+            String countQuery = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) and deleted = 0";
+            String query = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) and deleted = 0";
 
             // Append search condition if provided
             if (searchParam != null && !searchParam.isEmpty()) {
@@ -454,6 +452,22 @@ public class BookedDao {
             return new ApiResponse<>(errorMessage, null, 500);
         } catch (ParseException e) {
             throw new RuntimeException(e);
+        }
+    }
+    public ApiResponse<Void> deleteBooked(int bookedId) {
+        String updateQuery = "UPDATE booked SET deleted = true WHERE id = ?";
+
+        try {
+            int rowsAffected = jdbcTemplate.update(updateQuery, bookedId);
+            if (rowsAffected > 0) {
+                return new ApiResponse<>("Booked item marked as deleted successfully", null, 200);
+            } else {
+                return new ApiResponse<>("No booked item found with the given ID", null, 404);
+            }
+        } catch (Exception e) {
+            // Handle any exceptions
+            e.printStackTrace(); // You may want to log the exception instead
+            return new ApiResponse<>("Failed to mark booked item as deleted: " + e.getMessage(), null, 500);
         }
     }
 }

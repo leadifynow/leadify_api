@@ -61,4 +61,8 @@ public class BookedController {
     public ApiResponse<Void> createManualBooking (@RequestBody Booked booked) {
         return bookedService.createManualBooking(booked);
     }
+    @PostMapping("delete/{bookedId}")
+    public ApiResponse<Void> deleteBooked(@PathVariable int bookedId) {
+        return  bookedService.deleteBooked(bookedId);
+    }
 }

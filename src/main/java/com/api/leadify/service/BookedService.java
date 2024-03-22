@@ -49,4 +49,7 @@ public class BookedService {
     public ApiResponse<Void> createManualBooking(Booked booked) {
         return bookedDao.createManual(booked);
     }
+    public ApiResponse<Void> deleteBooked(int bookedId) {
+        return bookedDao.deleteBooked(bookedId);
+    }
 }

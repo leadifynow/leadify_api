@@ -24,6 +24,15 @@ public class Booked {
     private String notes;
     private Timestamp created_at;
     private String publicist;
+    private Boolean deleted;
+
+    public Boolean getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
+    }
 
     public String getPublicist() {
         return publicist;
