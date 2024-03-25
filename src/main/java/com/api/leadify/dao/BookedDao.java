@@ -272,16 +272,16 @@ public class BookedDao {
             return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-    public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId) {
+    public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId, String workspace) {
         try {
             String sql = "SELECT i.id, i.event_type AS event_name, i.workspace AS workspace_id, i.campaign_id AS campaign_id, i.campaign_name AS campaign_name, i.lead_email AS email, i.title, i.email AS second_email, " +
                     "i.website, i.industry, i.lastName AS last_name, i.firstName AS first_name, i.number_of_employees AS business, i.companyName AS name, i.linkedin_url, i.stage_id, i.notes, 0 as booked " +
                     "FROM interested i " +
                     "JOIN workspace w ON i.workspace = w.id " +
                     "JOIN company c ON w.company_id = c.id " +
-                    "WHERE (i.id = ? OR i.lead_email LIKE ? OR i.firstName LIKE ? OR i.lastName LIKE ? OR i.notes LIKE ?) AND c.id = ?";
+                    "WHERE (i.id = ? OR i.lead_email LIKE ? OR i.firstName LIKE ? OR i.lastName LIKE ? OR i.notes LIKE ?) AND c.id = ? AND i.workspace = ?";
             String searchTermLike = "%" + searchTerm + "%";
-            List<Booked> bookedList = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Booked.class), searchTerm, searchTermLike, searchTermLike, searchTermLike, searchTermLike, companyId);
+            List<Booked> bookedList = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Booked.class), searchTerm, searchTermLike, searchTermLike, searchTermLike, searchTermLike, companyId, workspace);
             return new ApiResponse<>("Booked records retrieved successfully", bookedList, 200);
         } catch (DataAccessException e) {
             String errorMessage = "Error retrieving booked records: " + e.getLocalizedMessage();

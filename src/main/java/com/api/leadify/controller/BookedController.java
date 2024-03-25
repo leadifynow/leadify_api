@@ -32,8 +32,8 @@ public class BookedController {
         return bookedService.getAllBookedByCompanyId(companyId, workspace_id, page, pageSize, filterType);
     }
     @GetMapping("/search")
-    public ApiResponse<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId) {
-        return bookedService.searchBookedRecords(searchTerm, companyId);
+    public ApiResponse<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId, @RequestParam String workspace) {
+        return bookedService.searchBookedRecords(searchTerm, companyId, workspace);
     }
     @PutMapping("/update/{interestedId}/{bookedId}")
     public ApiResponse<Booked> updateBookedAndInterested(@PathVariable int interestedId, @PathVariable int bookedId) {

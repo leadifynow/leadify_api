@@ -26,8 +26,8 @@ public class BookedService {
     public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize, int filterType) {
         return bookedDao.getAllBookedByCompanyId(companyId, workspaceId, page, pageSize, filterType);
     }
-    public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId) {
-        return bookedDao.searchBookedRecords(searchTerm, companyId);
+    public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId, String workspace) {
+        return bookedDao.searchBookedRecords(searchTerm, companyId, workspace);
     }
     public ApiResponse<Booked> updateBookedAndInterested(int interestedId, int bookedId) {
         return bookedDao.updateBookedAndInterested(interestedId, bookedId);
