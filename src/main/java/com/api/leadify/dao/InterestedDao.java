@@ -54,7 +54,7 @@ public class InterestedDao {
         String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
         int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, leadEmail, workspaceId.toString());
 
-        if (emailCount > 0) {
+        if (emailCount > 0 && !Objects.equals(campaignName, "Didn't Close Re-Engage Campaign")) {
             // Email already exists, do nothing
             return;
         }
