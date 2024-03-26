@@ -47,8 +47,8 @@ public class InterestedController {
     public ApiResponse<Void> updateManager(@PathVariable int interestedId, @PathVariable int managerId) {
         return interestedService.updateManager(interestedId, managerId);
     }
-    @PutMapping("/updateNotes/{interestedId}/{newNotes}")
-    public ApiResponse<String> updateInterestedNotes(@PathVariable int interestedId, @PathVariable String newNotes) {
+    @PutMapping("/updateNotes/{interestedId}")
+    public ApiResponse<String> updateInterestedNotes(@PathVariable int interestedId, @RequestParam(required = false) String newNotes) {
         return interestedService.updateInterestedNotes(interestedId, newNotes);
     }
     @GetMapping("/search")
