@@ -28,8 +28,10 @@ public class BookedController {
         return bookedService.createBooked(companyId, booked);
     }
     @GetMapping("/getByCompany/{companyId}/{workspace_id}/{page}/{pageSize}/{filterType}")
-    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(@PathVariable("companyId") int companyId, @PathVariable("workspace_id") String workspace_id, @PathVariable int page, @PathVariable int pageSize, @PathVariable int filterType) {
-        return bookedService.getAllBookedByCompanyId(companyId, workspace_id, page, pageSize, filterType);
+    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(@PathVariable("companyId") int companyId, @PathVariable("workspace_id") String workspace_id, @PathVariable int page, @PathVariable int pageSize, @PathVariable int filterType,
+                                                                                @RequestParam(required = false) String startDate,
+                                                                                @RequestParam(required = false) String endDate) {
+        return bookedService.getAllBookedByCompanyId(companyId, workspace_id, page, pageSize, filterType, startDate, endDate);
     }
     @GetMapping("/search")
     public ApiResponse<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId, @RequestParam String workspace) {

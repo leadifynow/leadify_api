@@ -195,10 +195,17 @@ public class BookedDao {
             return new ApiResponse<>("Error creating booked", null, 500);
         }
     }
-    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize, int filterType) {
+    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(
+            int companyId,
+            String workspaceId,
+            int page,
+            int pageSize,
+            int filterType,
+            String startDate,
+            String endDate) {
         try {
             // Construct base SQL query without filter
-            String baseSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) and deleted = 0";
+            String baseSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0";
 
             // Construct SQL query based on filterType parameter
             String countSql;
@@ -212,8 +219,27 @@ public class BookedDao {
                 throw new IllegalArgumentException("Invalid filterType: " + filterType);
             }
 
+            // Add filter conditions for startDate and endDate if they are not null
+            if (startDate != null && endDate != null) {
+                countSql += " AND created_at BETWEEN ? AND ?";
+            }
+
+            if (startDate != null && !startDate.isEmpty()) {
+                startDate = startDate.substring(0, 10) + "T00:00:00.000Z";
+            }
+
+// For endDate, set time to 23:59:59.999
+            if (endDate != null && !endDate.isEmpty()) {
+                endDate = endDate.substring(0, 10) + "T23:59:59.999Z";
+            }
+
             // Query to count total bookings
-            int totalItems = jdbcTemplate.queryForObject(countSql, Integer.class, companyId, workspaceId);
+            int totalItems = 0;
+            if (startDate != null && endDate != null) {
+                totalItems = jdbcTemplate.queryForObject(countSql, Integer.class, companyId, workspaceId, startDate, endDate);
+            } else {
+                totalItems = jdbcTemplate.queryForObject(countSql, Integer.class, companyId, workspaceId);
+            }
 
             // Calculate total pages
             int totalPages = (int) Math.ceil((double) totalItems / pageSize);
@@ -234,26 +260,32 @@ public class BookedDao {
             // Construct SQL query based on filterType parameter for retrieving paginated bookings
             String sql;
             if (filterType == 1) {
-                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0 " +
-                        "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
-                        "LIMIT ? OFFSET ?";
+                sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0 ";
             } else if (filterType == 2) {
                 sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0 " +
-                        "AND interested_id IS NOT NULL " +
-                        "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
-                        "LIMIT ? OFFSET ?";
+                        "AND interested_id IS NOT NULL ";
             } else if (filterType == 3) {
                 sql = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0 " +
-                        "AND interested_id IS NULL " +
-                        "ORDER BY created_at DESC " + // Adding ORDER BY clause for most recent bookings
-                        "LIMIT ? OFFSET ?";
+                        "AND interested_id IS NULL ";
             } else {
                 throw new IllegalArgumentException("Invalid filterType: " + filterType);
             }
 
+            // Add filter conditions for startDate and endDate if they are not null
+            if (startDate != null && endDate != null) {
+                sql += "AND created_at BETWEEN ? AND ? ";
+            }
+
+            // Adding ORDER BY clause for most recent bookings
+            sql += "ORDER BY created_at DESC LIMIT ? OFFSET ?";
+
             // Retrieve paginated bookings based on the constructed SQL query
-            List<Booked> bookedList = jdbcTemplate.query(sql, new Object[]{companyId, workspaceId, pageSize, offset},
-                    new BeanPropertyRowMapper<>(Booked.class));
+            List<Booked> bookedList = null;
+            if (startDate != null && endDate != null) {
+                bookedList = jdbcTemplate.query(sql, new Object[]{companyId, workspaceId, startDate, endDate, pageSize, offset}, new BeanPropertyRowMapper<>(Booked.class));
+            } else {
+                bookedList = jdbcTemplate.query(sql, new Object[]{companyId, workspaceId, pageSize, offset}, new BeanPropertyRowMapper<>(Booked.class));
+            }
 
             // Check if there is a next page
             boolean hasNextPage = page < totalPages;
