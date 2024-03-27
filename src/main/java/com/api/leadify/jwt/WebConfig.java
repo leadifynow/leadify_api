@@ -13,7 +13,7 @@ public class WebConfig implements WebMvcConfigurer {
     private static final Logger LOGGER = LoggerFactory.getLogger(WebConfig.class);
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        LOGGER.info("CORS POLICY on WebConfig!!!");
+        // LOGGER.info("CORS POLICY on WebConfig!!!");
         registry.addMapping("/*")
         .allowedOrigins("*")
         .allowCredentials(false)
@@ -21,6 +21,6 @@ public class WebConfig implements WebMvcConfigurer {
         .exposedHeaders("*")
         .allowedMethods("*")
         ;
-        LOGGER.info("<-------");
+        // LOGGER.info("<-------");
     }
 }

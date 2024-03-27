@@ -56,12 +56,12 @@ public class JWT {
 		String token = request.getHeader(HEADER).replace(PREFIX, "");
 		try {
 			Claims claims = Jwts.parser().setSigningKey(SECRETKEY.getBytes()).parseClaimsJws(token).getBody();
-			LOGGER.info("Token expiration time: {}", claims.getExpiration()); // Log expiration time
+			// LOGGER.info("Token expiration time: {}", claims.getExpiration()); // Log expiration time
 			long timeLeft = claims.getExpiration().getTime() - System.currentTimeMillis();
 			long minutesLeft = timeLeft / (60 * 1000);
-			LOGGER.info("Minutes left for expiration: {}", minutesLeft);
+			// LOGGER.info("Minutes left for expiration: {}", minutesLeft);
 			if (claims.getExpiration().before(new Date())) {
-				LOGGER.info("TOKEN EXPIRADO!");
+				// LOGGER.info("TOKEN EXPIRADO!");
 				sessionM.idUsuario = -999;
 				sessionM.email = "TOKEN EXPIRADO";
 				sessionM.token = "TOKEN EXPIRADO";
@@ -73,12 +73,12 @@ public class JWT {
 				sessionM.status = 0;
 				sessionM.token = token;
 				sessionM.expiration = claims.getExpiration(); // Add expiration time to SessionM
-				LOGGER.info("Token expiration time: {}", claims.getExpiration()); // Log expiration time
+				// LOGGER.info("Token expiration time: {}", claims.getExpiration()); // Log expiration time
 			}
 
 		} catch(Exception e) {
-			LOGGER.info("TOKEN no válido" );
-			LOGGER.info("TOKEN EXPIRADO!");
+			// LOGGER.info("TOKEN no válido" );
+			// LOGGER.info("TOKEN EXPIRADO!");
 			sessionM.idUsuario = -999;
 			sessionM.email = "TOKEN EXPIRADO";
 			sessionM.token = "TOKEN EXPIRADO";
