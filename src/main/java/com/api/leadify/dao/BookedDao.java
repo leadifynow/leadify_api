@@ -3,6 +3,8 @@ package com.api.leadify.dao;
 import com.api.leadify.entity.Booked;
 import com.api.leadify.entity.Interested;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -19,7 +21,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Date;
-
+@Slf4j
 @Repository
 public class BookedDao {
     private final JdbcTemplate jdbcTemplate;
@@ -52,7 +54,6 @@ public class BookedDao {
             publicist = firstMember.get("user_name").asText();
 
             UUID workspaceId = null;
-
             if (event_name.equals("Mindful Agency - Initial Consultation")
                     || event_name.equals("Mindful Agency - Strategy Consultation")
                     || event_name.equals("Mindful Agency - Premium Consultation")
@@ -99,8 +100,6 @@ public class BookedDao {
             }
 
             // Check if the email exists in the interested table
-            System.out.println(email + "email");
-            System.out.println(workspaceId + "workspace");
             String interestedIdQuery = "SELECT id FROM interested WHERE lead_email = ? AND booked = 0";
             Integer interestedId;
             try {
@@ -108,7 +107,6 @@ public class BookedDao {
                 if (interestedId > 0) {
                     String workspaceQuery = "SELECT workspace from interested where id = ?";
                     UUID workspace = UUID.fromString(jdbcTemplate.queryForObject(workspaceQuery, String.class, interestedId));
-                    System.out.println("worksapce: " + workspace);
                     String updateInterestedSql = "UPDATE interested SET booked = 1 WHERE id = ?";
                     jdbcTemplate.update(updateInterestedSql, interestedId);
                     workspaceId = workspace;
@@ -122,9 +120,7 @@ public class BookedDao {
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
             Integer finalInterestedId = interestedId;
-            System.out.println(workspaceId);
             UUID finalWorkspaceId = workspaceId;
-            System.out.println(finalWorkspaceId);
             String finalPublicist = publicist;
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -189,10 +185,12 @@ public class BookedDao {
 
             return new ApiResponse<>("Booked created successfully", null, 201);
         } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Error creating booked");
-            System.out.println(booked);
-            return new ApiResponse<>("Error creating booked", null, 500);
+            log.error("An error occurred: {}", e.getMessage(), e);
+            JsonNode payloadNode = booked.getPayload();
+            String errorMessage = e.getMessage();
+            String insertQuery = "INSERT INTO error_log (error_message, data) VALUES (?, ?)";
+            jdbcTemplate.update(insertQuery, errorMessage, payloadNode.toString());
+            throw new RuntimeException("An error occurred: " + errorMessage, e);
         }
     }
     public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(

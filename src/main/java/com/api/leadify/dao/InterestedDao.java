@@ -6,6 +6,7 @@ import com.api.leadify.entity.Stage;
 import com.api.leadify.entity.Workspace;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -23,7 +24,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
-
+@Slf4j
 @Repository
 public class InterestedDao {
     private final JdbcTemplate jdbcTemplate;
@@ -44,35 +45,36 @@ public class InterestedDao {
     }
     public void createInterested(Interested interested) {
 
-        // Sacamos los valores que necesitamos para validaciones, etc
-        UUID workspaceId = interested.getWorkspace();
-        UUID campaignId = interested.getCampaign_id();
-        String campaignName = interested.getCampaign_name();
-        String leadEmail = interested.getLead_email();
+        try {
+            // Sacamos los valores que necesitamos para validaciones, etc
+            UUID workspaceId = interested.getWorkspace();
+            UUID campaignId = interested.getCampaign_id();
+            String campaignName = interested.getCampaign_name();
+            String leadEmail = interested.getLead_email();
 
-        // Check if the email already exists in the interested table
-        String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
-        int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, leadEmail, workspaceId.toString());
+            // Check if the email already exists in the interested table
+            String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
+            int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, leadEmail, workspaceId.toString());
 
-        if (emailCount > 0 && !Objects.equals(campaignName, "Didn't Close Re-Engage Campaign")) {
-            // Email already exists, do nothing
-            return;
-        }
+            if (emailCount > 0 && !Objects.equals(campaignName, "Didn't Close Re-Engage Campaign")) {
+                // Email already exists, do nothing
+                return;
+            }
 
-        // Primer si el existe el workspace
-        if (!workspaceDao.workspaceExists(workspaceId)) {
-            // Sino existe lo agregamos
-            Workspace newWorkspace = new Workspace();
-            newWorkspace.setId(workspaceId);
-            newWorkspace.setName("Default Workspace Name");
-            workspaceDao.createWorkspace(newWorkspace);
+            // Primer si el existe el workspace
+            if (!workspaceDao.workspaceExists(workspaceId)) {
+                // Sino existe lo agregamos
+                Workspace newWorkspace = new Workspace();
+                newWorkspace.setId(workspaceId);
+                newWorkspace.setName("Default Workspace Name");
+                workspaceDao.createWorkspace(newWorkspace);
 
-            // Create the Main stage
-            Stage mainStage = new Stage();
-            mainStage.setWorkspace_id(workspaceId);
-            mainStage.setName("Main");
-            mainStage.setFollowup(3);
-            ApiResponse<Integer> createMainStageResponse = stageDao.createStage(mainStage);
+                // Create the Main stage
+                Stage mainStage = new Stage();
+                mainStage.setWorkspace_id(workspaceId);
+                mainStage.setName("Main");
+                mainStage.setFollowup(3);
+                ApiResponse<Integer> createMainStageResponse = stageDao.createStage(mainStage);
 
 //            if (createMainStageResponse.getCode() == 201) {
 //                // Set the Main stage ID as the default stage_id for the Interested entity
@@ -83,102 +85,130 @@ public class InterestedDao {
 //                return; // Exit method
 //            }
 
-            // Check if "Not a Fit" stage exists
-            ApiResponse<Integer> notFitStageIdResponse = stageDao.getStageIdByName(workspaceId, "Not a Fit");
-            if (notFitStageIdResponse.getCode() == 404) {
-                // Create the "Not a Fit" stage if it doesn't exist
-                Stage notFitStage = new Stage();
-                notFitStage.setWorkspace_id(workspaceId);
-                notFitStage.setName("Not a Fit");
-                notFitStage.setFollowup(0);
-                ApiResponse<Integer> createNotFitStageResponse = stageDao.createStage(notFitStage);
+                // Check if "Not a Fit" stage exists
+                ApiResponse<Integer> notFitStageIdResponse = stageDao.getStageIdByName(workspaceId, "Not a Fit");
+                if (notFitStageIdResponse.getCode() == 404) {
+                    // Create the "Not a Fit" stage if it doesn't exist
+                    Stage notFitStage = new Stage();
+                    notFitStage.setWorkspace_id(workspaceId);
+                    notFitStage.setName("Not a Fit");
+                    notFitStage.setFollowup(0);
+                    ApiResponse<Integer> createNotFitStageResponse = stageDao.createStage(notFitStage);
 
-                if (createNotFitStageResponse.getCode() != 201) {
+                    if (createNotFitStageResponse.getCode() != 201) {
+                        // Handle error if stage creation fails
+                        System.out.println("Error creating Not a Fit stage: " + createNotFitStageResponse.getMessage());
+                        return; // Exit method
+                    }
+                }
+
+                // Create the "Custom date" stage
+                Stage customDateStage = new Stage();
+                customDateStage.setWorkspace_id(workspaceId);
+                customDateStage.setName("Custom date");
+                ApiResponse<Integer> createCustomDateStageResponse = stageDao.createStage(customDateStage);
+
+                if (createCustomDateStageResponse.getCode() != 201) {
                     // Handle error if stage creation fails
-                    System.out.println("Error creating Not a Fit stage: " + createNotFitStageResponse.getMessage());
+                    System.out.println("Error creating Custom date stage: " + createCustomDateStageResponse.getMessage());
+                    return; // Exit method
+                }
+            } else {
+                // Retrieve the ID of the stage with the lowest position for the existing workspace
+                ApiResponse<Integer> minPositionStageResponse = stageDao.getMinPositionStageId(workspaceId);
+                if (minPositionStageResponse.getCode() == 200) {
+                    interested.setStage_id(minPositionStageResponse.getData());
+                } else {
+                    // Handle error if retrieving the minimum position stage fails
+                    System.out.println("Error retrieving minimum position stage: " + minPositionStageResponse.getMessage());
                     return; // Exit method
                 }
             }
 
-            // Create the "Custom date" stage
-            Stage customDateStage = new Stage();
-            customDateStage.setWorkspace_id(workspaceId);
-            customDateStage.setName("Custom date");
-            ApiResponse<Integer> createCustomDateStageResponse = stageDao.createStage(customDateStage);
+            // Checamos si existe la campaña
+            if(!campaignDao.campaignExists(campaignId)) {
+                // Sino existe la agregamos
+                Campaign newCampaign = new Campaign();
+                newCampaign.setId(campaignId);
+                newCampaign.setWorkspace_id(workspaceId);
+                newCampaign.setCampaign_name(campaignName);
+                campaignDao.createCampaign(newCampaign);
+            }
 
-            if (createCustomDateStageResponse.getCode() != 201) {
-                // Handle error if stage creation fails
-                System.out.println("Error creating Custom date stage: " + createCustomDateStageResponse.getMessage());
-                return; // Exit method
+            // Insertamos en la table interested
+            String insertQuery = "INSERT INTO interested (event_type, workspace, campaign_id, campaign_name, lead_email, title, email, " +
+                    "website, industry, lastName, firstName, number_of_employees, companyName, linkedin_url, stage_id, booked) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            try {
+                jdbcTemplate.update(connection -> {
+                    PreparedStatement ps = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
+                    ps.setString(1, interested.getEvent_type());
+                    ps.setString(2, interested.getWorkspace().toString());
+                    ps.setString(3, interested.getCampaign_id().toString());
+                    ps.setString(4, interested.getCampaign_name());
+                    ps.setString(5, interested.getLead_email());
+                    ps.setString(6, interested.getTitle());
+                    ps.setString(7, interested.getEmail());
+                    ps.setString(8, interested.getWebsite());
+                    ps.setString(9, interested.getIndustry());
+                    ps.setString(10, interested.getLastName());
+                    ps.setString(11, interested.getFirstName());
+                    ps.setString(12, interested.getNumber_of_employees());
+                    ps.setString(13, interested.getCompanyName());
+                    ps.setString(14, interested.getLinkedin_url());
+                    ps.setObject(15, null); // interested.getStage_id()
+                    ps.setInt(16, 0); // booked status initially set to 0
+                    return ps;
+                }, keyHolder);
+            } catch (DataAccessException e) {
+                // Log the exception or handle it as required
+                // You can throw a custom exception with an error message
+                throw new RuntimeException("Failed to insert data into the database: " + e.getMessage());
             }
-        } else {
-            // Retrieve the ID of the stage with the lowest position for the existing workspace
-            ApiResponse<Integer> minPositionStageResponse = stageDao.getMinPositionStageId(workspaceId);
-            if (minPositionStageResponse.getCode() == 200) {
-                interested.setStage_id(minPositionStageResponse.getData());
-            } else {
-                // Handle error if retrieving the minimum position stage fails
-                System.out.println("Error retrieving minimum position stage: " + minPositionStageResponse.getMessage());
-                return; // Exit method
+
+            // Get the generated interested_id
+            int interestedId = keyHolder.getKey().intValue();
+            // Check if the email exists in the booked table
+            String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ? AND (workspace_id = ? OR workspace_id IS NULL)";
+            int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, leadEmail, interested.getWorkspace().toString());
+
+            if (emailExistsInBooked > 0) {
+                // If the email exists in booked table, update booked status to 1
+                String updateInterestedQuery = "UPDATE interested SET booked = 1 WHERE lead_email = ?";
+                jdbcTemplate.update(updateInterestedQuery, leadEmail);
+
+                String updateBookedQuery = "UPDATE booked SET interested_id = ? WHERE email = ?";
+                jdbcTemplate.update(updateBookedQuery, interestedId, leadEmail);
             }
+        } catch (Exception e) {
+            // Log the exception
+            log.error("An error occurred: {}", e.getMessage(), e);
+
+            // Serialize the Interested object to JSON
+            String additionalData = serializeInterested(interested);
+
+            // Save the error message and serialized Interested object to the error_log table
+            String errorMessage = e.getMessage();
+            String insertQuery = "INSERT INTO error_log (error_message, data) VALUES (?, ?)";
+            jdbcTemplate.update(insertQuery, errorMessage, additionalData);
+
+            // Rethrow the exception or handle it as appropriate
+            throw new RuntimeException("An error occurred: " + errorMessage, e);
         }
 
-        // Checamos si existe la campaña
-        if(!campaignDao.campaignExists(campaignId)) {
-            // Sino existe la agregamos
-            Campaign newCampaign = new Campaign();
-            newCampaign.setId(campaignId);
-            newCampaign.setWorkspace_id(workspaceId);
-            newCampaign.setCampaign_name(campaignName);
-            campaignDao.createCampaign(newCampaign);
-        }
 
-        // Insertamos en la table interested
-        String insertQuery = "INSERT INTO interested (event_type, workspace, campaign_id, campaign_name, lead_email, title, email, " +
-                "website, industry, lastName, firstName, number_of_employees, companyName, linkedin_url, stage_id, booked) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-
+    }
+    private String serializeInterested(Interested interested) {
         try {
-            jdbcTemplate.update(connection -> {
-                PreparedStatement ps = connection.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
-                ps.setString(1, interested.getEvent_type());
-                ps.setString(2, interested.getWorkspace().toString());
-                ps.setString(3, interested.getCampaign_id().toString());
-                ps.setString(4, interested.getCampaign_name());
-                ps.setString(5, interested.getLead_email());
-                ps.setString(6, interested.getTitle());
-                ps.setString(7, interested.getEmail());
-                ps.setString(8, interested.getWebsite());
-                ps.setString(9, interested.getIndustry());
-                ps.setString(10, interested.getLastName());
-                ps.setString(11, interested.getFirstName());
-                ps.setString(12, interested.getNumber_of_employees());
-                ps.setString(13, interested.getCompanyName());
-                ps.setString(14, interested.getLinkedin_url());
-                ps.setObject(15, null); // interested.getStage_id()
-                ps.setInt(16, 0); // booked status initially set to 0
-                return ps;
-            }, keyHolder);
-        } catch (DataAccessException e) {
-            // Log the exception or handle it as required
-            // You can throw a custom exception with an error message
-            throw new RuntimeException("Failed to insert data into the database: " + e.getMessage());
-        }
-
-        // Get the generated interested_id
-        int interestedId = keyHolder.getKey().intValue();
-        // Check if the email exists in the booked table
-        String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ? AND (workspace_id = ? OR workspace_id IS NULL)";
-        int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, leadEmail, interested.getWorkspace().toString());
-
-        if (emailExistsInBooked > 0) {
-            // If the email exists in booked table, update booked status to 1
-            String updateInterestedQuery = "UPDATE interested SET booked = 1 WHERE lead_email = ?";
-            jdbcTemplate.update(updateInterestedQuery, leadEmail);
-
-            String updateBookedQuery = "UPDATE booked SET interested_id = ? WHERE email = ?";
-            jdbcTemplate.update(updateBookedQuery, interestedId, leadEmail);
+            // Use Jackson ObjectMapper to serialize the Interested object to JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsString(interested);
+        } catch (Exception e) {
+            // Handle serialization exception
+            log.error("Error serializing Interested object: {}", e.getMessage(), e);
+            return null;
         }
     }
     public void updateStage(Integer stageId, Integer interestedId) {
