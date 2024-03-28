@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -98,13 +99,14 @@ public class BookedDao {
             } else {
                 return new ApiResponse<>("Invalid event name", null, 400);
             }
-
+            /// cambiar esto a un count como el de interesado
             // Check if the email exists in the interested table
             String interestedIdQuery = "SELECT id FROM interested WHERE lead_email = ? AND booked = 0";
-            Integer interestedId;
+            Integer interestedId = null;
             try {
-                interestedId = jdbcTemplate.queryForObject(interestedIdQuery, Integer.class, email);
-                if (interestedId > 0) {
+                List<Integer> interestedIds = jdbcTemplate.queryForList(interestedIdQuery, Integer.class, email);
+                if (interestedIds.size() == 1) {
+                    interestedId = interestedIds.get(0);
                     String workspaceQuery = "SELECT workspace from interested where id = ?";
                     UUID workspace = UUID.fromString(jdbcTemplate.queryForObject(workspaceQuery, String.class, interestedId));
                     String updateInterestedSql = "UPDATE interested SET booked = 1 WHERE id = ?";
@@ -445,18 +447,22 @@ public class BookedDao {
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
             Date parsedDate = dateFormat.parse(booked.getMeeting_date());
             Timestamp meetingTimestamp = new Timestamp(parsedDate.getTime());
-            String check = "SELECT id FROM interested where lead_email = ? AND (workspace = ? OR workspace IS NULL)";
+            String check = "SELECT id FROM interested where lead_email = ? AND (workspace = ? OR workspace IS NULL) AND booked = 0";
             Boolean updateHappen = false;
             Integer interestedId = null;
-            try {
-                interestedId = jdbcTemplate.queryForObject(check, Integer.class, booked.getEmail(), booked.getWorkspace_id());
-                if (interestedId != null) {
-                    String queryToUpdateInterested = "UPDATE interested SET booked = 1 WHERE id = ?";
-                    jdbcTemplate.update(queryToUpdateInterested, interestedId);
-                    updateHappen = true;
-                }
-            } catch (EmptyResultDataAccessException e) {
-                // No matching records found in the interested table
+
+// Perform the query to get a list of all matching ids
+            List<Integer> interestedIds = jdbcTemplate.queryForList(check, Integer.class, booked.getEmail(), booked.getWorkspace_id());
+
+// Check if only one interestedId is obtained
+            if (interestedIds.size() == 1) {
+                interestedId = interestedIds.get(0);
+                String queryToUpdateInterested = "UPDATE interested SET booked = 1 WHERE id = ?";
+                jdbcTemplate.update(queryToUpdateInterested, interestedId);
+                updateHappen = true;
+            } else {
+                // Handle the case where more than one result is obtained
+                // You can log an error, throw a custom exception, or handle it in any appropriate way
             }
             // Insert new booking
             String insertBookingSql = "INSERT INTO booked (email, name, company_id, workspace_id, event_name, referral, meeting_date, interested_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
