@@ -459,7 +459,7 @@ public class BookedDao {
                 // You can log an error, throw a custom exception, or handle it in any appropriate way
             }
             // Insert new booking
-            String insertBookingSql = "INSERT INTO booked (email, name, company_id, workspace_id, event_name, referral, meeting_date, interested_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            String insertBookingSql = "INSERT INTO booked (email, name, company_id, workspace_id, event_name, referral, meeting_date, interested_id, publicist, business) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             int insertedRows = jdbcTemplate.update(insertBookingSql,
                     booked.getEmail(),
                     booked.getName(),
@@ -468,7 +468,9 @@ public class BookedDao {
                     booked.getEvent_name(),
                     booked.getReferral(),
                     meetingTimestamp,
-                    interestedId
+                    interestedId,
+                    booked.getPublicist(),
+                    booked.getBusiness()
             );
 
             if (insertedRows > 0) {
