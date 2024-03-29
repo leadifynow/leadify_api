@@ -85,7 +85,7 @@ public class BookedDao {
                     // Handle other data access exceptions
                     e.printStackTrace();
                 }
-            } else if (event_name.equals("Mindful Agency - Discovery Call")){
+            } else if (event_name.equals("Mindful Agency - Discovery Call") || event_name.equals("Mindful Agency - Follow-Up Call")){
                 try {
                     workspaceId = null;
                 }catch (EmptyResultDataAccessException e) {
@@ -195,14 +195,7 @@ public class BookedDao {
             throw new RuntimeException("An error occurred: " + errorMessage, e);
         }
     }
-    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(
-            int companyId,
-            String workspaceId,
-            int page,
-            int pageSize,
-            int filterType,
-            String startDate,
-            String endDate) {
+    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize, int filterType, String startDate, String endDate) {
         try {
             // Construct base SQL query without filter
             String baseSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0";
