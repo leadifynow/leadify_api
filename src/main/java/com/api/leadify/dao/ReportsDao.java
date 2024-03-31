@@ -27,19 +27,19 @@ public class ReportsDao {
 
     public ApiResponse<ReportResponse> getReport(String workspace, String[] dates) {
         String totalInterestedQuery = "SELECT COUNT(*) FROM interested WHERE workspace = ? AND created_at BETWEEN ? AND ?";
-        String totalBookedMatchedQuery = "SELECT COUNT(*) FROM booked WHERE interested_id IS NOT NULL AND workspace_id = ? AND created_at BETWEEN ? AND ?";
-        String uniqueEmailBookedMatchQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE interested_id IS NOT NULL AND workspace_id = ? AND created_at BETWEEN ? AND ?";
-        String totalInterestedAndBookedNonMatchedQuery = "SELECT COUNT(*) FROM booked WHERE interested_id IS NULL AND workspace_id = ? AND created_at BETWEEN ? AND ?";
-        String totalBookedQuery = "SELECT COUNT(*) FROM booked WHERE created_at BETWEEN ? AND ?";
-        String uniqueEmailGeneralQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE created_at BETWEEN ? AND ?";
+        String totalBookedMatchedQuery = "SELECT COUNT(*) FROM booked WHERE interested_id IS NOT NULL AND workspace_id = ? AND created_at BETWEEN ? AND ? AND deleted = 1";
+        String uniqueEmailBookedMatchQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE interested_id IS NOT NULL AND workspace_id = ? AND created_at BETWEEN ? AND ? AND deleted = 1";
+        String totalInterestedAndBookedNonMatchedQuery = "SELECT COUNT(*) FROM booked WHERE interested_id IS NULL AND workspace_id = ? AND created_at BETWEEN ? AND ? AND deleted = 1";
+        String totalBookedQuery = "SELECT COUNT(*) FROM booked WHERE created_at BETWEEN ? AND ? AND deleted = 1";
+        String uniqueEmailGeneralQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE created_at BETWEEN ? AND ? AND deleted = 1";
         String workspaceNameQuery = "SELECT name FROM workspace WHERE id = ?";
-        String allCallsQuery = "SELECT COUNT(*) FROM booked WHERE meeting_date BETWEEN ? AND ?";
-        String allCallsBookedQuery = "SELECT COUNT(*) FROM booked WHERE workspace_id = ? AND interested_id IS NOT NULL AND meeting_date BETWEEN ? AND ?";
+        String allCallsQuery = "SELECT COUNT(*) FROM booked WHERE meeting_date BETWEEN ? AND ? AND deleted = 1";
+        String allCallsBookedQuery = "SELECT COUNT(*) FROM booked WHERE workspace_id = ? AND interested_id IS NOT NULL AND meeting_date BETWEEN ? AND ? AND deleted = 1";
         String allInterestedQuery = "SELECT COUNT(*) FROM interested WHERE created_at BETWEEN ? AND ?";
         String stagesQuery = "SELECT id, name FROM stage WHERE workspace_id = ? ORDER BY position_workspace";
         String campaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM interested WHERE workspace = ? AND created_at BETWEEN ? AND ? GROUP BY campaign_name";
-        String appointmentsByCampaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM booked b INNER JOIN interested i ON b.interested_id = i.id WHERE i.workspace = ? AND interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? GROUP BY campaign_name";
-        String emailOccurrencesQuery = "SELECT email, COUNT(*) AS count FROM booked WHERE workspace_id = ? AND created_at BETWEEN ? AND ? GROUP BY email";
+        String appointmentsByCampaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM booked b INNER JOIN interested i ON b.interested_id = i.id WHERE i.workspace = ? AND interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? GROUP BY campaign_name AND deleted = 1";
+        String emailOccurrencesQuery = "SELECT email, COUNT(*) AS count FROM booked WHERE workspace_id = ? AND created_at BETWEEN ? AND ? GROUP BY email AND deleted = 1";
 
         Integer totalInterested = null;
         Integer totalBookedMatched = null;
