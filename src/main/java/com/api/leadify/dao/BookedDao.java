@@ -98,7 +98,7 @@ public class BookedDao {
                 // If the event name doesn't match any of the specified conditions, return an appropriate response
             } else {
                 workspaceId = null;
-                // return new ApiResponse<>("Invalid event name", null, 400);
+                return new ApiResponse<>("Invalid event name", null, 400);
             }
             /// cambiar esto a un count como el de interesado
             // Check if the email exists in the interested table
