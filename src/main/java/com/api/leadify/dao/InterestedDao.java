@@ -46,6 +46,7 @@ public class InterestedDao {
     public void createInterested(Interested interested) {
 
         try {
+            System.out.println(interested);
             // comentario de prueba
             // Sacamos los valores que necesitamos para validaciones, etc
             UUID workspaceId = interested.getWorkspace();
