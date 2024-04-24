@@ -305,9 +305,10 @@ public class BookedDao {
                     "FROM interested i " +
                     "JOIN workspace w ON i.workspace = w.id " +
                     "JOIN company c ON w.company_id = c.id " +
-                    "WHERE (i.id = ? OR i.lead_email LIKE ? OR i.firstName LIKE ? OR i.lastName LIKE ? OR i.notes LIKE ?) AND c.id = ? AND i.workspace = ?";
+                    "WHERE (i.id = ? OR i.lead_email LIKE ? OR i.firstName LIKE ? OR (CASE WHEN ? LIKE '% %' THEN i.lastName LIKE ? ELSE i.lastName LIKE ? END) OR i.notes LIKE ?) AND c.id = ? AND i.workspace = ?";
             String searchTermLike = "%" + searchTerm + "%";
-            List<Booked> bookedList = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Booked.class), searchTerm, searchTermLike, searchTermLike, searchTermLike, searchTermLike, companyId, workspace);
+            String secondWordLike = searchTerm.split(" ").length == 2 ? "%" + searchTerm.split(" ")[1] + "%" : searchTermLike;
+            List<Booked> bookedList = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Booked.class), searchTerm, searchTermLike, searchTermLike, searchTerm, secondWordLike, searchTermLike, searchTermLike, companyId, workspace);
             return new ApiResponse<>("Booked records retrieved successfully", bookedList, 200);
         } catch (DataAccessException e) {
             String errorMessage = "Error retrieving booked records: " + e.getLocalizedMessage();
