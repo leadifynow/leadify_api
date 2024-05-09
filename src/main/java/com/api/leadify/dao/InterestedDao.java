@@ -176,13 +176,17 @@ public class InterestedDao {
             String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ? AND (workspace_id = ? OR workspace_id IS NULL) AND interested_id IS NULL";
             int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, leadEmail, interested.getWorkspace().toString());
 
-            if (emailExistsInBooked == 1){
+            if (emailExistsInBooked == 1) {
                 // If the email exists in booked table, update booked status to 1
-                String updateInterestedQuery = "UPDATE interested SET booked = 1 WHERE lead_email = ? ";
+                String updateInterestedQuery = "UPDATE interested SET booked = 1 WHERE lead_email = ?";
                 jdbcTemplate.update(updateInterestedQuery, leadEmail);
 
                 String updateBookedQuery = "UPDATE booked SET interested_id = ? WHERE email = ? AND interested_id IS NULL";
                 jdbcTemplate.update(updateBookedQuery, interestedId, leadEmail);
+
+                // Update workspace_id in the booked table based on the interested table
+                String updateWorkspaceSql = "UPDATE booked SET workspace_id = (SELECT workspace FROM interested WHERE lead_email = booked.email) WHERE email = ? AND workspace_id IS NULL";
+                jdbcTemplate.update(updateWorkspaceSql, leadEmail);
             }
         } catch (Exception e) {
             // Log the exception
