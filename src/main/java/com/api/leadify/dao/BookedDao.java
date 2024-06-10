@@ -33,8 +33,10 @@ public class BookedDao {
     }
 
     public ApiResponse<Void> createBooked(Booked booked, int companyId) {
+        System.out.println("create booked");
         try {
             JsonNode payloadNode = booked.getPayload();
+            System.out.println(payloadNode);
 
             // Extracting basic booking information
             String email = payloadNode.get("email").asText();
