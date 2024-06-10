@@ -87,7 +87,19 @@ public class BookedDao {
                     // Handle other data access exceptions
                     e.printStackTrace();
                 }
-            } else if (event_name.equals("Mindful Agency - Discovery Call") || event_name.equals("Mindful Agency - Follow-Up Call")){
+            } else if (event_name.equals("MediaBlitz - Discovery Call")) {
+                String sql = "SELECT id FROM workspace WHERE name = ?";
+                try {
+                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Media Blitz - Michael");
+                }catch (EmptyResultDataAccessException e) {
+                    // Handle case when no workspace with the given name is found
+                    System.out.println("No workspace found for the given name.");
+                } catch (DataAccessException e) {
+                    // Handle other data access exceptions
+                    e.printStackTrace();
+                }
+            }
+            else if (event_name.equals("Mindful Agency - Discovery Call") || event_name.equals("Mindful Agency - Follow-Up Call")){
                 try {
                     workspaceId = null;
                 }catch (EmptyResultDataAccessException e) {
