@@ -492,12 +492,12 @@ public class InterestedDao {
     }
     public ApiResponse<Void> createManualInterested(Interested interested) {
         try {
-            String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
+            /*String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
             int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, interested.getLead_email(), interested.getWorkspace().toString());
 
             if (emailCount > 0) {
                 return new ApiResponse<>("Lead already exists", null, 500);
-            }
+            }*/
 
             String sql = "INSERT INTO interested (campaign_name, event_type, workspace, campaign_id, lead_email, email, lastName, firstName, companyName, stage_id, notes, booked, manager, next_update) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
