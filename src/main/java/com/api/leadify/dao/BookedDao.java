@@ -75,7 +75,8 @@ public class BookedDao {
             } else if (event_name.equals("Mindful Agency - Initial PR Consultation")
                     || event_name.equals("Mindful Agency - Strategy PR Consultation")
                     || event_name.equals("Mindful Agency - Premium PR Consultation")
-                    || event_name.equals("Mindful Agency - Elite PR Consultation")) {
+                    || event_name.equals("Mindful Agency - Elite PR Consultation")
+                    || event_name.equals("Mindful Agency - Opportunity")) {
                 String sql = "SELECT id FROM workspace WHERE name = ?";
                 try {
                     // Execute the SELECT query and retrieve the ID
