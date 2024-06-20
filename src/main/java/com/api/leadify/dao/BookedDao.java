@@ -457,14 +457,26 @@ public class BookedDao {
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
             Date parsedDate = dateFormat.parse(booked.getMeeting_date());
             Timestamp meetingTimestamp = new Timestamp(parsedDate.getTime());
-            String check = "SELECT id FROM interested where lead_email = ? AND (workspace = ? OR workspace IS NULL) AND booked = 0";
+
+            // Fetch the company name based on company_id
+            String fetchCompanyNameSql = "SELECT name FROM company WHERE id = ?";
+            String companyName = jdbcTemplate.queryForObject(fetchCompanyNameSql, String.class, booked.getCompany_id());
+
+            if (companyName == null) {
+                return new ApiResponse<>("Company not found", null, 404);
+            }
+
+            // Construct the event name
+            String eventName = companyName + " - Call";
+
+            String check = "SELECT id FROM interested WHERE lead_email = ? AND (workspace = ? OR workspace IS NULL) AND booked = 0";
             Boolean updateHappen = false;
             Integer interestedId = null;
 
-// Perform the query to get a list of all matching ids
+            // Perform the query to get a list of all matching ids
             List<Integer> interestedIds = jdbcTemplate.queryForList(check, Integer.class, booked.getEmail(), booked.getWorkspace_id());
 
-// Check if only one interestedId is obtained
+            // Check if only one interestedId is obtained
             if (interestedIds.size() == 1) {
                 interestedId = interestedIds.get(0);
                 String queryToUpdateInterested = "UPDATE interested SET booked = 1 WHERE id = ?";
@@ -474,6 +486,7 @@ public class BookedDao {
                 // Handle the case where more than one result is obtained
                 // You can log an error, throw a custom exception, or handle it in any appropriate way
             }
+
             // Insert new booking
             String insertBookingSql = "INSERT INTO booked (email, name, company_id, workspace_id, event_name, referral, meeting_date, interested_id, publicist, business) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             int insertedRows = jdbcTemplate.update(insertBookingSql,
@@ -481,7 +494,7 @@ public class BookedDao {
                     booked.getName(),
                     booked.getCompany_id(),
                     booked.getWorkspace_id(),
-                    booked.getEvent_name(),
+                    eventName,  // Use the constructed event name
                     booked.getReferral(),
                     meetingTimestamp,
                     interestedId,
@@ -502,6 +515,7 @@ public class BookedDao {
             throw new RuntimeException(e);
         }
     }
+
     public ApiResponse<Void> deleteBooked(int bookedId) {
         String updateQuery = "UPDATE booked SET deleted = true WHERE id = ?";
 
