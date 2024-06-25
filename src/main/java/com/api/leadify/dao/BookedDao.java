@@ -387,7 +387,7 @@ public class BookedDao {
             int updatedInterestedRows = jdbcTemplate.update(updateInterestedSql, interestedId);
 
             // Reset interested_id to null in the booked table
-            String updateBookedSql = "UPDATE booked SET interested_id = NULL WHERE interested_id = ?";
+            String updateBookedSql = "UPDATE booked SET interested_id = NULL, workspace_id = NULL WHERE interested_id = ?";
             int updatedBookedRows = jdbcTemplate.update(updateBookedSql, interestedId);
 
             if (updatedInterestedRows > 0 || updatedBookedRows > 0) {

@@ -32,7 +32,7 @@ public class ReportsDao {
         String totalBookedMatchedQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NOT NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
         String uniqueEmailBookedMatchQuery = "SELECT COUNT(DISTINCT b.email) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NOT NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
         String totalInterestedAndBookedNonMatchedQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
-        String totalBookedQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        String totalBookedQuery = "SELECT COUNT(*) FROM booked WHERE created_at BETWEEN ? AND ? AND deleted = 0 AND company_id = ?";
         String uniqueEmailGeneralQuery = "SELECT COUNT(DISTINCT b.email) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
         String workspaceNameQuery = "SELECT name FROM workspace WHERE id = ?";
         String allCallsQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
