@@ -101,6 +101,10 @@ public class BookedDao {
             } else if (event_name.equals("Mindful Agency - Discovery Call") || event_name.equals("Mindful Agency - Follow-Up Call")) {
                 workspaceId = null;
                 log.info("No workspace needed for event '{}'", event_name);
+            } else if (event_name.equals("Leadify - Discovery Call")) {
+                sql = "SELECT id FROM workspace WHERE name = ?";
+                workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Leadify - Chelsea");
+                log.info("Workspace ID for 'Leadify - Chelsea : {}", workspaceId);
             } else {
                 log.warn("Invalid event name: {}", event_name);
                 return new ApiResponse<>("Invalid event name", null, 400);
