@@ -107,7 +107,7 @@ public class BookedDao {
                 log.info("Workspace ID for 'Leadify - Chelsea : {}", workspaceId);
             } else if (event_name.equals("Leadify - Consultation Call")) {
                 sql = "SELECT id FROM workspace WHERE name = ?";
-                workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Andre Inc");
+                workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Leadify - Andre");
                 log.info("Workspace ID for 'Leadify - Consultation Call : {}", workspaceId);
             } else {
                 log.warn("Invalid event name: {}", event_name);
