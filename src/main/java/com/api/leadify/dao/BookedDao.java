@@ -61,10 +61,7 @@ public class BookedDao {
 
             UUID workspaceId = null;
             String sql;
-            if (event_name.equals("Mindful Agency - Initial Consultation")
-                    || event_name.equals("Mindful Agency - Strategy Consultation")
-                    || event_name.equals("Mindful Agency - Premium Consultation")
-                    || event_name.equals("Mindful Agency - Elite Consultation")) {
+            if (event_name.equals("Mindful Agency - Strategy Consultation")) {
                 sql = "SELECT id FROM workspace WHERE name = ?";
                 try {
                     workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Lauren");
@@ -74,11 +71,7 @@ public class BookedDao {
                 } catch (DataAccessException e) {
                     log.error("DataAccessException: ", e);
                 }
-            } else if (event_name.equals("Mindful Agency - Initial PR Consultation")
-                    || event_name.equals("Mindful Agency - Strategy PR Consultation")
-                    || event_name.equals("Mindful Agency - Premium PR Consultation")
-                    || event_name.equals("Mindful Agency - Elite PR Consultation")
-                    || event_name.equals("Mindful Agency - Opportunity")) {
+            } else if (event_name.equals("Mindful Agency - Strategy PR Consultation")) {
                 sql = "SELECT id FROM workspace WHERE name = ?";
                 try {
                     workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Natalie");
