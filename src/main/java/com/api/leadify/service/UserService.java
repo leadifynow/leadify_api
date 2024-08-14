@@ -18,25 +18,28 @@ public class UserService {
     public UserService(UserDao userDao) {
         this.userDao = userDao;
     }
-    public ApiResponse<String> deleteUser(Integer userId) {
+    /*
+     *  public ApiResponse<String> deleteUser(Integer userId) {
         return userDao.deleteUser(userId);
     }
-    public ApiResponse<User> updateUser(User user) {
+        public ApiResponse<User> updateUser(User user) {
         return userDao.updateUser(user);
     }
+        
     public ApiResponse<User> createUser(User user) {
         return  userDao.createUser(user);
     }
-    public ApiResponse<List<User>> getUsers() {
+         public ApiResponse<List<User>> getUsers() {
         return userDao.getUsers();
     }
-    public ApiResponse<UserToken> loginUser(User user) {
+         public ApiResponse<UserToken> loginUser(User user) {
         return userDao.loginUser(user);
-    }
-    public ApiResponse<List<Company>> getUserCompanies(Integer userId) {
+    } 
+        public ApiResponse<List<Company>> getUserCompanies(Integer userId) {
         return userDao.getUserCompanies(userId);
     }
-    public ApiResponse<List<User>> getUsersByTypeId() {
+        public ApiResponse<List<User>> getUsersByTypeId() {
         return userDao.getUsersByTypeId();
     }
+     */
 }

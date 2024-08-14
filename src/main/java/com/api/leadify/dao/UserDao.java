@@ -11,6 +11,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import com.api.leadify.jwt.JWT;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,22 +27,22 @@ public class UserDao {
     public UserDao(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
-    public ApiResponse<String> deleteUser(Integer userId) {
+    public ResponseEntity<String> deleteUser(Integer userId) {
         String sql = "DELETE FROM user WHERE id = ?";
 
         try {
             int deletedRows = jdbcTemplate.update(sql, userId);
 
             if (deletedRows > 0) {
-                return new ApiResponse<>("User deleted successfully", null, 200);
+                return new ResponseEntity<>("User deleted successfully", null, 200);
             } else {
-                return new ApiResponse<>("User not found or already deleted", null, 404);
+                return new ResponseEntity<>("User not found or already deleted", null, 404);
             }
         } catch (Exception e) {
-            return new ApiResponse<>("Error deleting user", null, 500);
+            return new ResponseEntity<>("Error deleting user", null, 500);
         }
     }
-    public ApiResponse<User> updateUser(User updatedUser) {
+    public ResponseEntity<User> updateUser(User updatedUser) {
         String sql = "UPDATE user SET first_name=?, last_name=?, email=?, password=?, type_id=? WHERE id=?";
 
         try {
@@ -55,13 +58,15 @@ public class UserDao {
 
             if (updatedRows > 0) {
                 User updatedUserData = getUserById(updatedUser.getId());
-
-                return new ApiResponse<>("User updated successfully", updatedUserData, 200);
+                return ResponseEntity.ok(updatedUserData);
+                //return new ApiResponse<>("User updated successfully", updatedUserData, 200);
             } else {
-                return new ApiResponse<>("User not found or no updates applied", null, 404);
+                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("User not found or no updates applied", null, 404);
             }
         } catch (Exception e) {
-            return new ApiResponse<>("Error updating user", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error updating user", null, 500);
         }
     }
     private User getUserById(Integer userId) {
@@ -73,7 +78,7 @@ public class UserDao {
             return null;
         }
     }
-    public ApiResponse<User> createUser(User user) {
+    public ResponseEntity<User> createUser(User user) {
         String sql = "INSERT INTO user (first_name, last_name, email, password, type_id) VALUES (?, ?, ?, ?, ?)";
 
         try {
@@ -87,13 +92,14 @@ public class UserDao {
             );
 
             // Fetch the created user to include in the ApiResponse
-
-            return new ApiResponse<>("User created successfully", null, 201);
+            return ResponseEntity.ok(user);
+            //return new ApiResponse<>("User created successfully", null, 201);
         } catch (Exception e) {
-            return new ApiResponse<>("Error creating user", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error creating user", null, 500);
         }
     }
-    public ApiResponse<List<User>> getUsers() {
+    public ResponseEntity<List<User>> getUsers() {
         String sql = "SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.created_at, u.updated_at, u.type_id, ut.name as type_name " +
                 "FROM user u " +
                 "JOIN user_type ut ON u.type_id = ut.id " +
@@ -118,15 +124,18 @@ public class UserDao {
             }
 
             if (userList.isEmpty()) {
-                return new ApiResponse<>("No users found", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No users found", null, 404);
             } else {
-                return new ApiResponse<>("Users retrieved successfully", userList, 200);
+                return ResponseEntity.ok(userList);
+                //return new ApiResponse<>("Users retrieved successfully", userList, 200);
             }
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("Error retrieving users", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving users", null, 500);
         }
     }
-    public ApiResponse<UserToken> loginUser(User user) {
+    public ResponseEntity<UserToken> loginUser(User user) {
         String sql = "SELECT id, first_name, last_name, email, type_id FROM user WHERE email = ? AND password = ?";
         try {
             Map<String, Object> result = jdbcTemplate.queryForMap(sql, user.getEmail(), user.getPassword());
@@ -140,14 +149,15 @@ public class UserDao {
             String token = JWT.getJWTToken((String) result.get("email"), (Integer) result.get("id"));
             loggedInUser.setToken(token); // Set the token
 
-            return new ApiResponse<>("Welcome back " + result.get("email") + "!", loggedInUser, 200);
+            return ResponseEntity.ok(loggedInUser);
+            //return new ApiResponse<>("Welcome back " + result.get("email") + "!", loggedInUser, 200);
         } catch (EmptyResultDataAccessException e) {
             // User not found
         }
-
-        return new ApiResponse<>("Username or password do not exist", null, 404);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        //return new ApiResponse<>("Username or password do not exist", null, 404);
     }
-    public ApiResponse<List<Company>> getUserCompanies(Integer userId) {
+    public ResponseEntity<List<Company>> getUserCompanies(Integer userId) {
         String adminCheckSql = "SELECT ut.id FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE u.id = ?";
         String allCompaniesSql = "SELECT DISTINCT c.id, c.name, c.location, c.flag, c.industry_id FROM company c";
         String userCompaniesSql = "SELECT DISTINCT c.id, c.name, c.location, c.flag, c.industry_id " +
@@ -183,17 +193,20 @@ public class UserDao {
                 companyList.add(company);
             }
 
-            if (companyList.isEmpty()) {
-                return new ApiResponse<>("No companies found for the given user", null, 404);
+            if (companyList.isEmpty()) { 
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No companies found for the given user", null, 404);
             } else {
-                return new ApiResponse<>("Companies retrieved successfully", companyList, 200);
+                return ResponseEntity.ok(companyList);
+                //return new ApiResponse<>("Companies retrieved successfully", companyList, 200);
             }
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("Error retrieving companies", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving companies", null, 500);
         }
     }
 
-    public ApiResponse<List<User>> getUsersByTypeId() {
+    public ResponseEntity<List<User>> getUsersByTypeId() {
         int typeId = 1;
         try {
             String sql = "SELECT id, email, type_id FROM `user` WHERE type_id = ?";
@@ -203,12 +216,13 @@ public class UserDao {
             for (User user : userList) {
                 user.setPassword(null);
             }
-
-            return new ApiResponse<>("Users retrieved successfully by type ID", userList, 200);
+            return ResponseEntity.ok(userList);
+            //return new ApiResponse<>("Users retrieved successfully by type ID", userList, 200);
         } catch (DataAccessException e) {
             String errorMessage = "Error retrieving users by type ID: " + e.getLocalizedMessage();
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
 }
