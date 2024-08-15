@@ -10,8 +10,7 @@ import java.util.List;
 
 @Service
 public class UserColumnsService {
-
-    private final UserColumnsDao userColumnsDao;
+/* private final UserColumnsDao userColumnsDao;
 
     @Autowired
     public UserColumnsService(UserColumnsDao userColumnsDao) {
@@ -24,4 +23,7 @@ public class UserColumnsService {
     public ApiResponse<UserColumns> updateUserColumns(UserColumns userColumns) {
         return userColumnsDao.updateUserColumns(userColumns);
     }
+ * 
+ * 
+ */
 }

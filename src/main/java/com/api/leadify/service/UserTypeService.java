@@ -10,7 +10,8 @@ import java.util.List;
 
 @Service
 public class UserTypeService {
-    private final UserTypeDao userTypeDao;
+    /*
+     *  private final UserTypeDao userTypeDao;
 
     @Autowired
     public UserTypeService(UserTypeDao userTypeDao) {
@@ -24,4 +25,7 @@ public class UserTypeService {
     public ApiResponse<List<UserType>> getUserTypes() {
         return userTypeDao.getUserTypes();
     }
+     * 
+     */
+
 }

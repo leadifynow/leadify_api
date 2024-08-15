@@ -1,9 +1,10 @@
 package com.api.leadify.controller;
 
 import com.api.leadify.dao.ApiResponse;
+import com.api.leadify.dao.WorkspaceDao;
 import com.api.leadify.entity.Workspace;
-import com.api.leadify.service.WorkspaceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,22 +13,22 @@ import java.util.List;
 @CrossOrigin
 @RequestMapping("/api/workspace")
 public class WorkspaceController {
-    private final WorkspaceService workspaceService;
+   private final WorkspaceDao workspaceDao;
 
     @Autowired
-    public WorkspaceController(WorkspaceService workspaceService) {
-        this.workspaceService = workspaceService;
-    }
+    public WorkspaceController(WorkspaceDao workspaceDao) { this.workspaceDao = workspaceDao; }
+
+
     @GetMapping("/getWorkspaces")
-    public ApiResponse<List<Workspace>> getWorkspaces() {
-        return workspaceService.getAllWorkspaces();
+    public ResponseEntity<List<Workspace>> getWorkspaces() {
+        return workspaceDao.getAll();
     }
     @PutMapping("/updateWorkspace")
-    public ApiResponse<Workspace> updateWorkspace(@RequestBody Workspace workspace) {
-        return workspaceService.updateWorkspace(workspace);
+    public ResponseEntity<Workspace> updateWorkspace(@RequestBody Workspace workspace) {
+        return workspaceDao.updateWorkspace(workspace);
     }
     @GetMapping("/getByCompanyId")
-    public ApiResponse<List<Workspace>> getWorkspacesByCompanyId(@RequestParam int companyId) {
-        return workspaceService.getWorkspacesByCompanyId(companyId);
+    public ResponseEntity<List<Workspace>> getWorkspacesByCompanyId(@RequestParam int companyId) {
+        return workspaceDao.getWorkspacesByCompanyId(companyId);
     }
 }

@@ -1,9 +1,11 @@
 package com.api.leadify.controller;
 
 import com.api.leadify.dao.ApiResponse;
+import com.api.leadify.dao.UserTypeDao;
 import com.api.leadify.entity.UserType;
 import com.api.leadify.service.UserTypeService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,20 +14,21 @@ import java.util.List;
 @CrossOrigin
 @RequestMapping("/api/user_types")
 public class UserTypeController {
-    private final UserTypeService userTypeService;
+   private final UserTypeDao userTypeDao;
 
     @Autowired
-    public UserTypeController(UserTypeService userTypeService) {
-        this.userTypeService = userTypeService;
+    public UserTypeController(UserTypeDao userTypeDao) {
+        this.userTypeDao = userTypeDao;
     }
 
     @GetMapping("/getAll")
-    public ApiResponse<List<UserType>> getUserTypes() {
-        return userTypeService.getUserTypes();
+    public ResponseEntity <List<UserType>> getUserTypes() {
+        return userTypeDao.getUserTypes();
     }
 
     @PostMapping("/create")
     public void createdUserTpye(@RequestBody UserType userType) {
-        userTypeService.createUserType(userType);
+        userTypeDao.createdUserType(userType);
+
     }
 }

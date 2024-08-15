@@ -11,7 +11,8 @@ import java.util.UUID;
 
 @Service
 public class StageService {
-    private final StageDao stageDao;
+    /*
+     * private final StageDao stageDao;
 
     @Autowired
     public StageService(StageDao stageDao) {
@@ -27,4 +28,6 @@ public class StageService {
     public ApiResponse<Integer> createStage(Stage newStage) {
         return stageDao.createStage(newStage);
     }
+     * 
+     */
 }

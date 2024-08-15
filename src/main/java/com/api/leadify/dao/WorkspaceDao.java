@@ -3,6 +3,8 @@ package com.api.leadify.dao;
 import com.api.leadify.entity.Workspace;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -28,21 +30,24 @@ public class WorkspaceDao {
         String sql = "INSERT INTO workspace (id, name) VALUES (?, ?)";
         jdbcTemplate.update(sql, workspace.getId().toString(), workspace.getName());
     }
-    public ApiResponse<List<Workspace>> getAll() {
+    public ResponseEntity<List<Workspace>> getAll() {
         try {
             String sql = "SELECT * FROM workspace";
             List<Workspace> workspaces = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Workspace.class));
 
             if (workspaces.isEmpty()) {
-                return new ApiResponse<>("No workspaces found", null, 404);
+                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No workspaces found", null, 404);
             } else {
-                return new ApiResponse<>("Workspaces retrieved successfully", workspaces, 200);
+                return ResponseEntity.ok(workspaces);
+                //return new ApiResponse<>("Workspaces retrieved successfully", workspaces, 200);
             }
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("Error retrieving workspaces", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving workspaces", null, 500);
         }
     }
-    public ApiResponse<Workspace> updateWorkspace(Workspace workspace) {
+    public ResponseEntity<Workspace> updateWorkspace(Workspace workspace) {
         try {
             String sql = "UPDATE workspace SET name = ?, description = ?, company_id = ? WHERE id = ?";
             int affectedRows = jdbcTemplate.update(
@@ -54,26 +59,32 @@ public class WorkspaceDao {
             );
 
             if (affectedRows > 0) {
-                return new ApiResponse<>("Workspace updated successfully", workspace, 200);
+                return ResponseEntity.ok(workspace);
+                //return new ApiResponse<>("Workspace updated successfully", workspace, 200);
             } else {
-                return new ApiResponse<>("Workspace not found", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("Workspace not found", null, 404);
             }
         } catch (Exception e) {
-            return new ApiResponse<>("Error updating workspace", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error updating workspace", null, 500);
         }
     }
-    public ApiResponse<List<Workspace>> getWorkspacesByCompanyId(int companyId) {
+    public ResponseEntity<List<Workspace>> getWorkspacesByCompanyId(int companyId) {
         try {
             String sql = "SELECT * FROM workspace WHERE company_id = ?";
             List<Workspace> workspaces = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Workspace.class), companyId);
 
             if (workspaces.isEmpty()) {
-                return new ApiResponse<>("No workspaces found for the given company ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No workspaces found for the given company ID", null, 404);
             } else {
-                return new ApiResponse<>("Workspaces retrieved successfully", workspaces, 200);
+                return ResponseEntity.ok(workspaces);
+                //return new ApiResponse<>("Workspaces retrieved successfully", workspaces, 200);
             }
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("Error retrieving workspaces", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving workspaces", null, 500);
         }
     }
 }

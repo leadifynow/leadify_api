@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -77,7 +79,7 @@ public class InterestedDao {
                 mainStage.setWorkspace_id(workspaceId);
                 mainStage.setName("Main");
                 mainStage.setFollowup(3);
-                ApiResponse<Integer> createMainStageResponse = stageDao.createStage(mainStage);
+                ResponseEntity<Integer> createMainStageResponse = stageDao.createStage(mainStage);
 
 //            if (createMainStageResponse.getCode() == 201) {
 //                // Set the Main stage ID as the default stage_id for the Interested entity
@@ -89,18 +91,18 @@ public class InterestedDao {
 //            }
 
                 // Check if "Not a Fit" stage exists
-                ApiResponse<Integer> notFitStageIdResponse = stageDao.getStageIdByName(workspaceId, "Not a Fit");
-                if (notFitStageIdResponse.getCode() == 404) {
+                ResponseEntity<Integer> notFitStageIdResponse = stageDao.getStageIdByName(workspaceId, "Not a Fit");
+                if (notFitStageIdResponse.getStatusCode() == HttpStatus.NOT_FOUND) {
                     // Create the "Not a Fit" stage if it doesn't exist
                     Stage notFitStage = new Stage();
                     notFitStage.setWorkspace_id(workspaceId);
                     notFitStage.setName("Not a Fit");
                     notFitStage.setFollowup(0);
-                    ApiResponse<Integer> createNotFitStageResponse = stageDao.createStage(notFitStage);
+                    ResponseEntity<Integer> createNotFitStageResponse = stageDao.createStage(notFitStage);
 
-                    if (createNotFitStageResponse.getCode() != 201) {
+                    if (createNotFitStageResponse.getStatusCode() != HttpStatus.OK) {
                         // Handle error if stage creation fails
-                        System.out.println("Error creating Not a Fit stage: " + createNotFitStageResponse.getMessage());
+                        System.out.println("Error creating Not a Fit stage: " + createNotFitStageResponse);
                         return; // Exit method
                     }
                 }
@@ -109,21 +111,22 @@ public class InterestedDao {
                 Stage customDateStage = new Stage();
                 customDateStage.setWorkspace_id(workspaceId);
                 customDateStage.setName("Custom date");
-                ApiResponse<Integer> createCustomDateStageResponse = stageDao.createStage(customDateStage);
+                ResponseEntity<Integer> createCustomDateStageResponse = stageDao.createStage(customDateStage);
 
-                if (createCustomDateStageResponse.getCode() != 201) {
+                if (createCustomDateStageResponse.getStatusCode() != HttpStatus.OK) {
                     // Handle error if stage creation fails
-                    System.out.println("Error creating Custom date stage: " + createCustomDateStageResponse.getMessage());
+                    System.out.println("Error creating Custom date stage: " + createCustomDateStageResponse);
                     return; // Exit method
                 }
             } else {
                 // Retrieve the ID of the stage with the lowest position for the existing workspace
-                ApiResponse<Integer> minPositionStageResponse = stageDao.getMinPositionStageId(workspaceId);
-                if (minPositionStageResponse.getCode() == 200) {
-                    interested.setStage_id(minPositionStageResponse.getData());
+                ResponseEntity<Integer> minPositionStageResponse = stageDao.getMinPositionStageId(workspaceId);
+                if (minPositionStageResponse.getStatusCode() != HttpStatus.OK) {
+                    Integer minPositionStageId = minPositionStageResponse.getBody();
+                    interested.setStage_id(minPositionStageId);
                 } else {
                     // Handle error if retrieving the minimum position stage fails
-                    System.out.println("Error retrieving minimum position stage: " + minPositionStageResponse.getMessage());
+                    System.out.println("Error retrieving minimum position stage: " + minPositionStageResponse);
                     return; // Exit method
                 }
             }

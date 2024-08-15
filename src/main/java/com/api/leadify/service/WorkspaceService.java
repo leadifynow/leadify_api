@@ -10,7 +10,8 @@ import java.util.List;
 
 @Service
 public class WorkspaceService {
-    private final WorkspaceDao workspaceDao;
+    /**
+     *  private final WorkspaceDao workspaceDao;
 
     @Autowired
     public WorkspaceService(WorkspaceDao workspaceDao) { this.workspaceDao = workspaceDao; }
@@ -24,4 +25,5 @@ public class WorkspaceService {
     public ApiResponse<List<Workspace>> getWorkspacesByCompanyId(int companyId) {
         return workspaceDao.getWorkspacesByCompanyId(companyId);
     }
+     */
 }

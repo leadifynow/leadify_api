@@ -1,9 +1,9 @@
 package com.api.leadify.controller;
 
-import com.api.leadify.dao.ApiResponse;
+import com.api.leadify.dao.StageDao;
 import com.api.leadify.entity.Stage;
-import com.api.leadify.service.StageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,23 +13,23 @@ import java.util.UUID;
 @CrossOrigin
 @RequestMapping("/api/stages")
 public class StageController {
-    private final StageService stageService;
+     private final StageDao stageDao;
 
     @Autowired
-    public StageController(StageService stageService) {
-        this.stageService = stageService;
+    public StageController(StageDao stageDao) {
+        this.stageDao = stageDao;
     }
 
     @GetMapping("/getByWorkspaceId/{workspaceId}")
-    public ApiResponse<List<Stage>> getStagesByWorkspaceId(@PathVariable UUID workspaceId) {
-        return stageService.getStagesByWorkspaceId(workspaceId);
+    public ResponseEntity<List<Stage>> getStagesByWorkspaceId(@PathVariable UUID workspaceId) {
+        return stageDao.getStagesByWorkspaceId(workspaceId);
     }
     @PostMapping("/updatePositions")
-    public ApiResponse<String> updatePositions(@RequestBody List<Stage> stages) {
-        return stageService.updatePositions(stages);
+    public ResponseEntity<String> updatePositions(@RequestBody List<Stage> stages) {
+        return stageDao.updatePositions(stages);
     }
     @PostMapping("/createStage")
-    public ApiResponse<Integer> createStage(@RequestBody Stage newStage) {
-        return stageService.createStage(newStage);
+    public ResponseEntity<Integer> createStage(@RequestBody Stage newStage) {
+        return stageDao.createStage(newStage);
     }
 }

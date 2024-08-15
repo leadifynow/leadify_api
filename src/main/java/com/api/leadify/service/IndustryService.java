@@ -10,7 +10,8 @@ import java.util.List;
 
 @Service
 public class IndustryService {
-    private final IndustryDao industryDao;
+    /*
+     * private final IndustryDao industryDao;
 
     @Autowired
     public IndustryService(IndustryDao industryDao) { this.industryDao = industryDao; }
@@ -21,4 +22,5 @@ public class IndustryService {
     public List<Industry> getIndustries() {
         return industryDao.getIndustries();
     }
+     */
 }

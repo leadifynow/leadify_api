@@ -4,6 +4,8 @@ import com.api.leadify.entity.UserColumns;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -21,7 +23,7 @@ public class UserColumnsDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ApiResponse<List<UserColumns>> getUserColumnsByUserIdAndWorkspaceId(Integer userId, String workspaceId) {
+    public ResponseEntity<List<UserColumns>> getUserColumnsByUserIdAndWorkspaceId(Integer userId, String workspaceId) {
         try {
             String sql = "SELECT * FROM user_columns WHERE user_id = ? AND workspace_id = ?";
             List<UserColumns> userColumns = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(UserColumns.class), userId, workspaceId);
@@ -30,12 +32,15 @@ public class UserColumnsDao {
                 addUserColumns(new UserColumns( userId, workspaceId));
                 // Fetch the newly created record
                 userColumns = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(UserColumns.class), userId, workspaceId);
-                return new ApiResponse<>("Added default columns.", userColumns, 200);
+                return ResponseEntity.ok(userColumns);
+                //return new ApiResponse<>("Added default columns.", userColumns, 200);
             } else {
-                return new ApiResponse<>("User columns retrieved successfully", userColumns, 200);
+                return ResponseEntity.ok(userColumns);
+                //return new ApiResponse<>("User columns retrieved successfully", userColumns, 200);
             }
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("Error retrieving user columns", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving user columns", null, 500);
         }
     }
     public void addUserColumns(UserColumns userColumns) {
@@ -46,7 +51,7 @@ public class UserColumnsDao {
                 userColumns.getWorkspaceId()
         );
     }
-    public ApiResponse<UserColumns> updateUserColumns(UserColumns userColumns) {
+    public ResponseEntity<UserColumns> updateUserColumns(UserColumns userColumns) {
         try {
             String sql = "UPDATE user_columns SET "
                     + "first_name = ?, "
@@ -89,15 +94,18 @@ public class UserColumnsDao {
                     userColumns.getWorkspaceId());
 
             if (rowsUpdated > 0) {
-                return new ApiResponse<>("User columns updated successfully", userColumns, 200);
+                return ResponseEntity.ok(userColumns);
+                //return new ApiResponse<>("User columns updated successfully", userColumns, 200);
             } else {
-                return new ApiResponse<>("No user columns found for the given criteria", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No user columns found for the given criteria", null, 404);
             }
         } catch (DataAccessException e) {
             // Log the SQL query and the exception
-            String errorMessage = "Error updating user columns. SQL: " + e.getLocalizedMessage();
+            //String errorMessage = "Error updating user columns. SQL: " + e.getLocalizedMessage();
             e.printStackTrace(); // Print the stack trace for detailed error information
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
 

@@ -4,6 +4,8 @@ import com.api.leadify.entity.Stage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -25,32 +27,35 @@ public class StageDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ApiResponse<List<Stage>> getStagesByWorkspaceId(UUID workspaceId) {
+    public ResponseEntity<List<Stage>> getStagesByWorkspaceId(UUID workspaceId) {
         try {
             String sql = "SELECT * FROM stage WHERE workspace_id = ? ORDER BY position_workspace";
             List<Stage> stages = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Stage.class), workspaceId.toString());
 
             if (stages.isEmpty()) {
-                return new ApiResponse<>("No stages found for the given workspace ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No stages found for the given workspace ID", null, 404);
             } else {
-                return new ApiResponse<>("Stages retrieved successfully", stages, 200);
+                return ResponseEntity.ok(stages);
+                //return new ApiResponse<>("Stages retrieved successfully", stages, 200);
             }
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("Error retrieving stages", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving stages", null, 500);
         }
     }
-    public ApiResponse<String> updatePositions(List<Stage> stages) {
+    public ResponseEntity<String> updatePositions(List<Stage> stages) {
         try {
             for (Stage stage : stages) {
                 String sql = "UPDATE stage SET position_workspace = ? WHERE id = ?";
                 jdbcTemplate.update(sql, stage.getPosition_workspace(), stage.getId());
             }
-            return new ApiResponse<>("Positions updated successfully", null, 200);
+            return new ResponseEntity<>("Positions updated successfully", null, 200);
         } catch (Exception e) {
-            return new ApiResponse<>("Error updating positions", null, 500);
+            return new ResponseEntity<>("Error updating positions", null, 500);
         }
     }
-    public ApiResponse<Integer> createStage(Stage newStage) {
+    public ResponseEntity<Integer> createStage(Stage newStage) {
         try {
             // Find the current maximum position_workspace value
             String maxPositionSql = "SELECT MAX(position_workspace) FROM stage WHERE workspace_id = ?";
@@ -79,30 +84,35 @@ public class StageDao {
 
             // Retrieve the auto-generated ID of the newly created stage
             int newStageId = keyHolder.getKey().intValue();
-
-            return new ApiResponse<>("Stage created successfully", newStageId, 201);
+            return ResponseEntity.ok(newStageId);
+            //return new ApiResponse<>("Stage created successfully", newStageId, 201);
         } catch (EmptyResultDataAccessException e) {
             // Handle case where no results were returned from the database query
-            return new ApiResponse<>("No existing stages found", null, 404);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            //return new ApiResponse<>("No existing stages found", null, 404);
         } catch (DataAccessException e) {
             // Handle database-related exceptions
             e.printStackTrace(); // Log the exception stack trace for debugging purposes
-            return new ApiResponse<>("Error accessing database", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error accessing database", null, 500);
         } catch (Exception e) {
             // Catch any other unexpected exceptions
             e.printStackTrace(); // Log the exception stack trace for debugging purposes
-            return new ApiResponse<>("Unexpected error", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+           // return new ApiResponse<>("Unexpected error", null, 500);
         }
     }
-    public ApiResponse<Integer> getMinPositionStageId(UUID workspaceId) {
+    public ResponseEntity<Integer> getMinPositionStageId(UUID workspaceId) {
         try {
             String sql = "SELECT id FROM stage WHERE workspace_id = ? ORDER BY position_workspace ASC LIMIT 1";
             Integer minPositionStageId = jdbcTemplate.queryForObject(sql, Integer.class, workspaceId.toString());
-            return new ApiResponse<>("Minimum position stage ID retrieved successfully", minPositionStageId, 200);
+            return ResponseEntity.ok(minPositionStageId);
+            //return new ApiResponse<>("Minimum position stage ID retrieved successfully", minPositionStageId, 200);
         } catch (DataAccessException e) {
-            String errorMessage = "Error retrieving minimum position stage ID: " + e.getLocalizedMessage();
+            //String errorMessage = "Error retrieving minimum position stage ID: " + e.getLocalizedMessage();
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
     public Integer getFollowupForStage(Integer stageId) {
@@ -115,17 +125,20 @@ public class StageDao {
             return null;
         }
     }
-    public ApiResponse<Integer> getStageIdByName(UUID workspaceId, String stageName) {
+    public ResponseEntity<Integer> getStageIdByName(UUID workspaceId, String stageName) {
         try {
             String sql = "SELECT id FROM stage WHERE workspace_id = ? AND name = ?";
             Integer stageId = jdbcTemplate.queryForObject(sql, Integer.class, workspaceId.toString(), stageName);
-            return new ApiResponse<>("Stage ID retrieved successfully", stageId, 200);
+            return ResponseEntity.ok(stageId);
+            //return new ApiResponse<>("Stage ID retrieved successfully", stageId, 200);
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("No stage found with the given name in the workspace", null, 404);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            //return new ApiResponse<>("No stage found with the given name in the workspace", null, 404);
         } catch (DataAccessException e) {
-            String errorMessage = "Error retrieving stage ID by name: " + e.getLocalizedMessage();
+            //String errorMessage = "Error retrieving stage ID by name: " + e.getLocalizedMessage();
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
 
