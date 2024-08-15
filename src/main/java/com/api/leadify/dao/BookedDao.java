@@ -91,7 +91,8 @@ public class BookedDao {
                 } catch (DataAccessException e) {
                     log.error("DataAccessException: ", e);
                 }
-            } else if (event_name.equals("Mindful Agency - Discovery Call") || event_name.equals("Mindful Agency - Follow-Up Call")) {
+            } else if (event_name.equals("Mindful Agency - Discovery Call") || event_name.equals("Mindful Agency - Follow-Up Call")
+                    || event_name.equals("Mindful Agency - Lead Generation Consultation")) {
                 workspaceId = null;
                 log.info("No workspace needed for event '{}'", event_name);
             } else if (event_name.equals("Leadify - Discovery Call")) {
@@ -99,9 +100,11 @@ public class BookedDao {
                 workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Leadify - Chelsea");
                 log.info("Workspace ID for 'Leadify - Chelsea : {}", workspaceId);
             } else if (event_name.equals("Leadify - Consultation Call")) {
-                sql = "SELECT id FROM workspace WHERE name = ?";
+                workspaceId = null;
+                log.info("No workspace needed for event '{}'", event_name);
+                /*sql = "SELECT id FROM workspace WHERE name = ?";
                 workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Leadify - Andre");
-                log.info("Workspace ID for 'Leadify - Consultation Call : {}", workspaceId);
+                log.info("Workspace ID for 'Leadify - Consultation Call : {}", workspaceId);*/
             } else if (event_name.equals("Priority 1 Meeting")) {
                 sql = "SELECT id FROM workspace WHERE name = ?";
                 workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Royal Logistics - Vincent/Rachel");
