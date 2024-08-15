@@ -3,7 +3,6 @@ package com.api.leadify.controller;
 import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.UserTypeDao;
 import com.api.leadify.entity.UserType;
-import com.api.leadify.service.UserTypeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

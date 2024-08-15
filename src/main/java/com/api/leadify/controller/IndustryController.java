@@ -3,7 +3,6 @@ package com.api.leadify.controller;
 import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.IndustryDao;
 import com.api.leadify.entity.Industry;
-import com.api.leadify.service.IndustryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;

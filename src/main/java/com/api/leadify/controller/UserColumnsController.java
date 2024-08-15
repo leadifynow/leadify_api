@@ -3,7 +3,6 @@ package com.api.leadify.controller;
 import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.UserColumnsDao;
 import com.api.leadify.entity.UserColumns;
-import com.api.leadify.service.UserColumnsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
