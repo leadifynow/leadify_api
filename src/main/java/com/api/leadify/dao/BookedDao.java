@@ -95,6 +95,16 @@ public class BookedDao {
                     || event_name.equals("Mindful Agency - Lead Generation Consultation")) {
                 workspaceId = null;
                 log.info("No workspace needed for event '{}'", event_name);
+            } else if (event_name.equals("Mindful Agency - Initial Consultation")) {
+                sql = "SELECT id FROM workspace WHERE name = ?";
+                try {
+                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Instagram");
+                    log.info("Workspace ID for 'Mindful Media - Instagram': {}", workspaceId);
+                } catch (EmptyResultDataAccessException e) {
+                    log.warn("No workspace found for the given name 'Mindful Media - Instagram'.");
+                } catch (DataAccessException e) {
+                    log.error("DataAccessException: ", e);
+                }
             } else if (event_name.equals("Leadify - Discovery Call")) {
                 sql = "SELECT id FROM workspace WHERE name = ?";
                 workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Leadify - Chelsea");
