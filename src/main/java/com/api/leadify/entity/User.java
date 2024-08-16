@@ -7,7 +7,9 @@ public class User {
     private String email;
     private String password;
     private int type_id;
-    private String type_name; // Added field for user_type name
+    private String type_name;// Added field for user_type name
+    private boolean theme;
+    private boolean remember;
 
     // Constructors, getters, and setters
 
@@ -66,5 +68,22 @@ public class User {
     public void setType_id(int type_id) {
         this.type_id = type_id;
     }
+
+    public boolean isTheme() {
+        return theme;
+    }
+
+    public void setTheme(boolean theme) {
+        this.theme = theme;
+    }
+
+    public boolean isRemember() {
+        return remember;
+    }
+
+    public void setRemember(boolean remember) {
+        this.remember = remember;
+    }
+
 }
 

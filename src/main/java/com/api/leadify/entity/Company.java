@@ -6,6 +6,7 @@ public class Company {
     private String location;
     private String flag;
     private int industry_id;
+    private boolean favorite;
 
     public String getFlag() {
         return flag;
@@ -45,5 +46,13 @@ public class Company {
 
     public void setIndustry_id(int industry_id) {
         this.industry_id = industry_id;
+    }
+
+    public boolean isFavorite() {
+        return favorite;
+    }
+
+    public void setFavorite(boolean favorite) {
+        this.favorite = favorite;
     }
 }

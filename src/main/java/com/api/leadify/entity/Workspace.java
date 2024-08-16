@@ -7,6 +7,7 @@ public class Workspace {
     private String name;
     private String description;
     private Integer company_id;
+    private boolean favorite;
 
     public Integer getCompany_id() {
         return company_id;
@@ -38,5 +39,13 @@ public class Workspace {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public boolean isFavorite() {
+        return favorite;
+    }
+
+    public void setFavorite(boolean favorite) {
+        this.favorite = favorite;
     }
 }

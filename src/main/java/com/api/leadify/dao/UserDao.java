@@ -136,7 +136,7 @@ public class UserDao {
         }
     }
     public ResponseEntity<UserToken> loginUser(User user) {
-        String sql = "SELECT id, first_name, last_name, email, type_id FROM user WHERE email = ? AND password = ?";
+        String sql = "SELECT id, first_name, last_name, email, type_id, theme, remember FROM user WHERE email = ? AND password = ?";
         try {
             Map<String, Object> result = jdbcTemplate.queryForMap(sql, user.getEmail(), user.getPassword());
 
@@ -148,6 +148,8 @@ public class UserDao {
             loggedInUser.setType_id((Integer) result.get("type_id"));
             String token = JWT.getJWTToken((String) result.get("email"), (Integer) result.get("id"));
             loggedInUser.setToken(token); // Set the token
+            loggedInUser.setTheme((Boolean) result.get("theme"));
+            loggedInUser.setRemember((Boolean) result.get("remember"));
 
             return ResponseEntity.ok(loggedInUser);
             //return new ApiResponse<>("Welcome back " + result.get("email") + "!", loggedInUser, 200);
