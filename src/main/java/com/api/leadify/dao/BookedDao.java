@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -32,7 +34,7 @@ public class BookedDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ApiResponse<Void> createBooked(Booked booked, int companyId) {
+    public ResponseEntity<Void> createBooked(Booked booked, int companyId) {
         log.info("create booked");
         try {
             JsonNode payloadNode = booked.getPayload();
@@ -108,7 +110,8 @@ public class BookedDao {
                 log.info("Workspace ID for 'Vincent - Rachel : {}", workspaceId);
             } else {
                 log.warn("Invalid event name: {}", event_name);
-                return new ApiResponse<>("Invalid event name", null, 400);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("Invalid event name", null, 400);
             }
 
             // Check if the email exists in the interested table
@@ -203,8 +206,8 @@ public class BookedDao {
                     }
                 }
             }
-
-            return new ApiResponse<>("Booked created successfully", null, 201);
+            return ResponseEntity.ok().build();
+            //return new ApiResponse<>("Booked created successfully", null, 201);
         } catch (Exception e) {
             log.error("An error occurred: {}", e.getMessage(), e);
             JsonNode payloadNode = booked.getPayload();
@@ -214,7 +217,7 @@ public class BookedDao {
             throw new RuntimeException("An error occurred: " + errorMessage, e);
         }
     }
-    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize, int filterType, String startDate, String endDate) {
+    public ResponseEntity<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize, int filterType, String startDate, String endDate) {
         try {
             // Construct base SQL query without filter
             String baseSql = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) AND deleted = 0";
@@ -306,17 +309,19 @@ public class BookedDao {
             PaginatedResponse<List<Booked>> paginatedResponse = new PaginatedResponse<>(bookedList, page, pageSize, totalItems, totalPages, hasNextPage);
 
             if (bookedList.isEmpty()) {
-                return new ApiResponse<>("No bookings found for the given company ID and workspace ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No bookings found for the given company ID and workspace ID", null, 404);
             } else {
-                return new ApiResponse<>("Bookings retrieved successfully", paginatedResponse, 200);
+                return ResponseEntity.ok(paginatedResponse);
+                //return new ApiResponse<>("Bookings retrieved successfully", paginatedResponse, 200);
             }
         } catch (DataAccessException e) {
-            String errorMessage = "Error retrieving bookings by company ID and workspace ID. Details: " + e.getLocalizedMessage();
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-    public ApiResponse<List<Booked>> searchBookedRecords(String searchTerm, int companyId, String workspace) {
+    public ResponseEntity<List<Booked>> searchBookedRecords(String searchTerm, int companyId, String workspace) {
         try {
             String sql = "SELECT i.id, i.event_type AS event_name, i.workspace AS workspace_id, i.campaign_id AS campaign_id, i.campaign_name AS campaign_name, i.lead_email AS email, i.title, i.email AS second_email, " +
                     "i.website, i.industry, i.lastName AS last_name, i.firstName AS first_name, i.number_of_employees AS business, i.companyName AS name, i.linkedin_url, i.stage_id, i.notes, i.created_at, 0 as booked " + // added i.created_at
@@ -327,14 +332,15 @@ public class BookedDao {
             String searchTermLike = "%" + searchTerm + "%";
             String secondWordLike = searchTerm.split(" ").length == 2 ? "%" + searchTerm.split(" ")[1] + "%" : searchTermLike;
             List<Booked> bookedList = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Booked.class), searchTerm, searchTermLike, searchTermLike, searchTerm, secondWordLike, searchTermLike, searchTermLike, companyId, workspace);
-            return new ApiResponse<>("Booked records retrieved successfully", bookedList, 200);
+            return ResponseEntity.ok(bookedList);
+            //return new ApiResponse<>("Booked records retrieved successfully", bookedList, 200);
         } catch (DataAccessException e) {
-            String errorMessage = "Error retrieving booked records: " + e.getLocalizedMessage();
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-    public ApiResponse<Booked> updateBookedAndInterested(int interestedId, int bookedId) {
+    public ResponseEntity<Booked> updateBookedAndInterested(int interestedId, int bookedId) {
         try {
             // Update interested_id in the booked table
             String updateBookedSql = "UPDATE booked SET interested_id = ? WHERE id = ?";
@@ -350,20 +356,22 @@ public class BookedDao {
                 Booked updatedBooked = jdbcTemplate.queryForObject(selectBookedSql, new Object[]{bookedId}, new BeanPropertyRowMapper<>(Booked.class));
 
                 if (updatedBooked != null) {
-                    return new ApiResponse<>("Booked and interested records updated successfully", updatedBooked, 200);
+                    return ResponseEntity.ok(updatedBooked);
+                    //return new ApiResponse<>("Booked and interested records updated successfully", updatedBooked, 200);
                 } else {
-                    return new ApiResponse<>("Failed to retrieve updated booked record", null, 500);
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+                    //return new ApiResponse<>("Failed to retrieve updated booked record", null, 500);
                 }
             } else {
-                return new ApiResponse<>("No records updated", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No records updated", null, 404);
             }
         } catch (DataAccessException e) {
-            String errorMessage = "Error updating booked and interested records: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
-    public ApiResponse<Interested> getInterestedByBookedId(int bookedId) {
+    public ResponseEntity<Interested> getInterestedByBookedId(int bookedId) {
         try {
             String sql = "SELECT id FROM interested WHERE id = (SELECT interested_id FROM booked WHERE id = ?)";
             Integer interestedId = jdbcTemplate.queryForObject(sql, Integer.class, bookedId);
@@ -371,19 +379,21 @@ public class BookedDao {
             if (interestedId != null) {
                 String interestedSql = "SELECT * FROM interested WHERE id = ?";
                 Interested interested = jdbcTemplate.queryForObject(interestedSql, new BeanPropertyRowMapper<>(Interested.class), interestedId);
-                return new ApiResponse<>("Interested record retrieved successfully", interested, 200);
+                return ResponseEntity.ok(interested);
+                //return new ApiResponse<>("Interested record retrieved successfully", interested, 200);
             } else {
-                return new ApiResponse<>("No interested record found for the given booked id", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No interested record found for the given booked id", null, 404);
             }
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("No interested record found for the given booked id", null, 404);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+           // return new ApiResponse<>("No interested record found for the given booked id", null, 404);
         } catch (DataAccessException e) {
-            String errorMessage = "Error retrieving interested record: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
-    public ApiResponse<Void> resetInterestedAndBooked(int interestedId) {
+    public ResponseEntity<Void> resetInterestedAndBooked(int interestedId) {
         try {
             // Reset booked = 0 in the interested table
             String updateInterestedSql = "UPDATE interested SET booked = 0 WHERE id = ?";
@@ -394,17 +404,18 @@ public class BookedDao {
             int updatedBookedRows = jdbcTemplate.update(updateBookedSql, interestedId);
 
             if (updatedInterestedRows > 0 || updatedBookedRows > 0) {
-                return new ApiResponse<>("Interested and booked records reset successfully", null, 200);
+                return ResponseEntity.ok().build();
+                //return new ApiResponse<>("Interested and booked records reset successfully", null, 200);
             } else {
-                return new ApiResponse<>("No records updated", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+               // return new ApiResponse<>("No records updated", null, 404);
             }
         } catch (DataAccessException e) {
-            String errorMessage = "Error resetting interested and booked records: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
-    public ApiResponse<PaginatedResponse<List<Booked>>> findByCompanyIdAndWorkspaceId(int companyId, String workspaceId, String searchParam, int page, int pageSize) {
+    public ResponseEntity<PaginatedResponse<List<Booked>>> findByCompanyIdAndWorkspaceId(int companyId, String workspaceId, String searchParam, int page, int pageSize) {
         try {
             String countQuery = "SELECT COUNT(*) FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) and deleted = 0";
             String query = "SELECT * FROM booked WHERE company_id = ? AND (workspace_id = ? OR workspace_id IS NULL) and deleted = 0";
@@ -445,16 +456,19 @@ public class BookedDao {
             PaginatedResponse<List<Booked>> paginatedResponse = new PaginatedResponse<>(bookedList, page, pageSize, totalItems, totalPages, hasNextPage);
 
             if (bookedList.isEmpty()) {
-                return new ApiResponse<>("No bookings found for the given company ID and workspace ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No bookings found for the given company ID and workspace ID", null, 404);
             } else {
-                return new ApiResponse<>("Bookings retrieved successfully", paginatedResponse, 200);
+                return ResponseEntity.ok(paginatedResponse);
+                //return new ApiResponse<>("Bookings retrieved successfully", paginatedResponse, 200);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return new ApiResponse<>("Error retrieving bookings by company ID and workspace ID", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving bookings by company ID and workspace ID", null, 500);
         }
     }
-    public ApiResponse<Void> createManual(Booked booked) {
+    public ResponseEntity<Void> createManual(Booked booked) {
         try {
             // Parse the meeting date
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
@@ -466,7 +480,8 @@ public class BookedDao {
             String companyName = jdbcTemplate.queryForObject(fetchCompanyNameSql, String.class, booked.getCompany_id());
 
             if (companyName == null) {
-                return new ApiResponse<>("Company not found", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("Company not found", null, 404);
             }
 
             // Construct the event name
@@ -506,33 +521,37 @@ public class BookedDao {
             );
 
             if (insertedRows > 0) {
-                return new ApiResponse<>(updateHappen ? "Booking created and matched successfully" : "Booking created successfully", null, 200);
+                return ResponseEntity.ok().build();
+                //return new ApiResponse<>(updateHappen ? "Booking created and matched successfully" : "Booking created successfully", null, 200);
             } else {
-                return new ApiResponse<>("Failed to create booking", null, 400);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("Failed to create booking", null, 400);
             }
         } catch (DataAccessException e) {
-            String errorMessage = "Error creating booking: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public ApiResponse<Void> deleteBooked(int bookedId) {
+    public ResponseEntity<Void> deleteBooked(int bookedId) {
         String updateQuery = "UPDATE booked SET deleted = true WHERE id = ?";
 
         try {
             int rowsAffected = jdbcTemplate.update(updateQuery, bookedId);
             if (rowsAffected > 0) {
-                return new ApiResponse<>("Booked item marked as deleted successfully", null, 200);
+                return ResponseEntity.ok().build();
+                //return new ApiResponse<>("Booked item marked as deleted successfully", null, 200);
             } else {
-                return new ApiResponse<>("No booked item found with the given ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No booked item found with the given ID", null, 404);
             }
         } catch (Exception e) {
             // Handle any exceptions
             e.printStackTrace(); // You may want to log the exception instead
-            return new ApiResponse<>("Failed to mark booked item as deleted: " + e.getMessage(), null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Failed to mark booked item as deleted: " + e.getMessage(), null, 500);
         }
     }
 }

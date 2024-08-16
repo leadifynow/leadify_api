@@ -1,10 +1,12 @@
 package com.api.leadify.controller;
 
 import com.api.leadify.dao.ApiResponse;
+import com.api.leadify.dao.WorkspaceUserDao;
 import com.api.leadify.entity.User;
-import com.api.leadify.service.WorkspaceUserService;
 import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,32 +16,33 @@ import java.util.UUID;
 @CrossOrigin
 @RequestMapping("/api/workspace_user")
 public class WorkspaceUserController {
-    private final WorkspaceUserService workspaceUserService;
+   private final WorkspaceUserDao workspaceUserDao;
 
     @Autowired
-    public WorkspaceUserController(WorkspaceUserService workspaceUserService) { this.workspaceUserService = workspaceUserService; }
+    public WorkspaceUserController(WorkspaceUserDao workspaceUserDao) { this.workspaceUserDao = workspaceUserDao; }
 
     @GetMapping("/getByWorkspaceId/{workspaceId}")
-    public ApiResponse<List<?>> getWorkspaceUsersByWorkspaceId(@PathVariable UUID workspaceId) {
-        return workspaceUserService.getByWorkspaceId(workspaceId);
+    public ResponseEntity<List<?>> getWorkspaceUsersByWorkspaceId(@PathVariable UUID workspaceId) {
+        return workspaceUserDao.getByWorkspaceId(workspaceId);
     }
+
     @DeleteMapping("/deleteByUserId/{userId}")
-    public ApiResponse<String> deleteWorkspaceUserByUserId(@PathVariable int userId) {
-        return workspaceUserService.deleteByUserId(userId);
+    public ResponseEntity<String> deleteWorkspaceUserByUserId(@PathVariable int userId) {
+        return workspaceUserDao.deleteByUserId(userId);
     }
     @PostMapping("/addUserToWorkspace")
-    public ApiResponse<String> addUserToWorkspace(@RequestParam int userId, @RequestParam UUID workspaceId) {
+    public ResponseEntity<String> addUserToWorkspace(@RequestParam int userId, @RequestParam UUID workspaceId) {
         System.out.println(userId);
-        return workspaceUserService.addUserToWorkspace(userId, workspaceId);
+        return workspaceUserDao.addUserToWorkspace(userId, workspaceId);
     }
     @GetMapping("/searchUsers")
-    public ApiResponse<List<User>> searchUsers(@RequestParam String searchTerm, @RequestParam UUID workspaceId) {
-        List<User> users = workspaceUserService.searchUsersNotInWorkspace(searchTerm, workspaceId);
+    public ResponseEntity<List<User>> searchUsers(@RequestParam String searchTerm, @RequestParam UUID workspaceId) {
+        List<User> users = workspaceUserDao.searchUsersNotInWorkspace(searchTerm, workspaceId);
 
         if (users != null) {
-            return new ApiResponse<>("Users retrieved successfully", users, 200);
+            return ResponseEntity.ok(users);
         } else {
-            return new ApiResponse<>("Error retrieving users", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 }

@@ -3,6 +3,8 @@ package com.api.leadify.dao;
 import com.api.leadify.entity.Report;
 import com.api.leadify.entity.ReportResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
@@ -25,7 +27,7 @@ public class ReportsDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ApiResponse<ReportResponse> getReport(String workspace, String[] dates) {
+    public ResponseEntity<ReportResponse> getReport(String workspace, String[] dates) {
         // Queries updated to include company_id by joining workspace
         String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
         String totalInterestedQuery = "SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
@@ -179,7 +181,8 @@ public class ReportsDao {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return new ApiResponse<>("Couldn't generate report", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Couldn't generate report", null, 500);
         }
 
         double leadsPercentage = ((double) totalInterested / allInterested * 100);
@@ -212,7 +215,8 @@ public class ReportsDao {
 
         ReportResponse reportResponse = new ReportResponse(reports, workspaceName, stageDataList, campaignDataList, appointmentsByCampaignList, emailOccurrencesOutputList);
         reportResponse.calculateCampaignPercentages(totalInterested);
-        return new ApiResponse<>("success", reportResponse, 200);
+        return ResponseEntity.ok(reportResponse);
+        //return new ApiResponse<>("success", reportResponse, 200);
     }
 
 }

@@ -229,7 +229,7 @@ public class InterestedDao {
         String sql = "SELECT * FROM interested";
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Interested.class));
     }
-    public ApiResponse<PaginatedResponse<List<Interested>>> getAllByWorkspaceId(UUID workspaceId, int page, int pageSize) {
+    public ResponseEntity<PaginatedResponse<List<Interested>>> getAllByWorkspaceId(UUID workspaceId, int page, int pageSize) {
         try {
             // Query to retrieve all interested items based on workspace ID, where booked is 0 and manager is null
             String query = "SELECT * FROM interested WHERE workspace = ? AND booked = 0 AND manager IS NULL";
@@ -302,14 +302,17 @@ public class InterestedDao {
             PaginatedResponse<List<Interested>> paginatedResponse = new PaginatedResponse<>(paginatedInterestedList, page, pageSize, totalItems, totalPages, hasNextPage);
 
             if (paginatedInterestedList.isEmpty()) {
-                return new ApiResponse<>("No interested items found for the given workspace ID or they are already booked or managed", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No interested items found for the given workspace ID or they are already booked or managed", null, 404);
             } else {
-                return new ApiResponse<>("Interested items retrieved successfully", paginatedResponse, 200);
+                return ResponseEntity.ok(paginatedResponse);
+                //return new ApiResponse<>("Interested items retrieved successfully", paginatedResponse, 200);
             }
         } catch (Exception e) {
             e.printStackTrace();
             // Log or handle the exception
-            return new ApiResponse<>("Error retrieving interested items", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
 
@@ -342,7 +345,7 @@ public class InterestedDao {
             return -1; // Return -1 in case of exception
         }
     }
-    public ApiResponse<String> updateStage2(Integer interestedId, Integer stageId) {
+    public ResponseEntity<String> updateStage2(Integer interestedId, Integer stageId) {
         try {
             String sql = "UPDATE interested SET stage_id = ? WHERE id = ?";
             int affectedRows = jdbcTemplate.update(sql, stageId, interestedId);
@@ -369,15 +372,15 @@ public class InterestedDao {
                     jdbcTemplate.update(updateNextUpdateSql, Timestamp.valueOf(nextUpdate), interestedId);
                 }
 
-                return new ApiResponse<>("Stage updated successfully", null, 200);
+                return new ResponseEntity<>("Stage updated successfully", null, 200);
             } else {
-                return new ApiResponse<>("No interested item found with the given ID", null, 404);
+                return new ResponseEntity<>("No interested item found with the given ID", null, 404);
             }
         } catch (Exception e) {
-            return new ApiResponse<>("Error updating stage for interested item", null, 500);
+            return new ResponseEntity<>("Error updating stage for interested item", null, 500);
         }
     }
-    public ApiResponse<String> updateStageArray(JsonNode stageUpdates) {
+    public ResponseEntity<String> updateStageArray(JsonNode stageUpdates) {
         try {
             int updatedStagesCount = 0;
 
@@ -414,12 +417,12 @@ public class InterestedDao {
                 }
             }
 
-            return new ApiResponse<>("Updated " + updatedStagesCount + " stages", null, 200);
+            return new ResponseEntity<>("Updated " + updatedStagesCount + " stages", null, 200);
         } catch (Exception e) {
-            return new ApiResponse<>("Error updating stages for interested items", null, 500);
+            return new ResponseEntity<>("Error updating stages for interested items", null, 500);
         }
     }
-    public ApiResponse<Void> updateManager(int interestedId, int managerId) {
+    public ResponseEntity<Void> updateManager(int interestedId, int managerId) {
         try {
             // Update the manager for the interested record
             String updateSql = "UPDATE interested SET manager = ? WHERE id = ?";
@@ -429,70 +432,75 @@ public class InterestedDao {
                 // Insert a notification for the manager
                 String insertNotificationSql = "INSERT INTO notifications (title, description, user_id) VALUES (?, ?, ?)";
                 jdbcTemplate.update(insertNotificationSql, "New lead assigned", "You have been assigned as manager for a new lead", managerId);
-
-                return new ApiResponse<>("Manager updated successfully for the interested record, and a notification has been sent", null, 200);
+                
+                return ResponseEntity.ok().build();
+                //return new ResponseEntity<>("Manager updated successfully for the interested record, and a notification has been sent", null, 200);
             } else {
-                return new ApiResponse<>("No interested record found with the given ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ResponseEntity<>("No interested record found with the given ID", null, 404);
             }
         } catch (DataAccessException e) {
-            String errorMessage = "Error updating manager for the interested record: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
+            //String errorMessage = "Error updating manager for the interested record: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ResponseEntity<>(errorMessage, null, 500);
         }
     }
-    public ApiResponse<String> updateInterestedNotes(int interestedId, String newNotes) {
+    public ResponseEntity<String> updateInterestedNotes(int interestedId, String newNotes) {
         try {
             // Check if the interested exists
             newNotes = (Objects.equals(newNotes, "null")) ? "" : newNotes;
             String checkInterestedSql = "SELECT COUNT(*) FROM interested WHERE id = ?";
             int count = jdbcTemplate.queryForObject(checkInterestedSql, Integer.class, interestedId);
             if (count == 0) {
-                return new ApiResponse<>("Interested not found", null, 404);
+                return new ResponseEntity<>("Interested not found", null, 404);
             }
 
             // Update notes
             String updateNotesSql = "UPDATE interested SET notes = ? WHERE id = ?";
             jdbcTemplate.update(updateNotesSql, newNotes, interestedId);
 
-            return new ApiResponse<>("Notes updated successfully", null, 200);
+            return new ResponseEntity<>("Notes updated successfully", null, 200);
         } catch (EmptyResultDataAccessException e) {
-            return new ApiResponse<>("Interested not found", null, 404);
+            return new ResponseEntity<>("Interested not found", null, 404);
         } catch (DataAccessException e) {
             e.printStackTrace();
-            return new ApiResponse<>("Error updating notes", null, 500);
+            return new ResponseEntity<>("Error updating notes", null, 500);
         } catch (Exception e) {
             e.printStackTrace();
-            return new ApiResponse<>("Unexpected error", null, 500);
+            return new ResponseEntity<>("Unexpected error", null, 500);
         }
     }
-    public ApiResponse<List<Interested>> searchInterestedRecords(String searchTerm, UUID workspaceId) {
+    public ResponseEntity<List<Interested>> searchInterestedRecords(String searchTerm, UUID workspaceId) {
         try {
             String sql = "SELECT * FROM interested WHERE workspace = ? AND (lead_email LIKE ? OR firstName LIKE ? OR lastName LIKE ? OR notes LIKE ?)";
             String searchTermLike = "%" + searchTerm + "%";
             List<Interested> interestedList = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Interested.class),
                     workspaceId.toString(), searchTermLike, searchTermLike, searchTermLike, searchTermLike);
-            return new ApiResponse<>("Interested records retrieved successfully", interestedList, 200);
+            return ResponseEntity.ok(interestedList);
+            //return new ApiResponse<>("Interested records retrieved successfully", interestedList, 200);
         } catch (DataAccessException e) {
-            String errorMessage = "Error retrieving interested records: " + e.getLocalizedMessage();
+            //String errorMessage = "Error retrieving interested records: " + e.getLocalizedMessage();
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-    public ApiResponse<String> updateNextUpdateDate(Integer interestedId, LocalDate nextUpdateDate) {
+    public ResponseEntity<String> updateNextUpdateDate(Integer interestedId, LocalDate nextUpdateDate) {
         try {
             String sql = "UPDATE interested SET next_update = ? WHERE id = ?";
             int affectedRows = jdbcTemplate.update(sql, nextUpdateDate, interestedId);
 
             if (affectedRows > 0) {
-                return new ApiResponse<>("Next update date updated successfully", null, 200);
+                return new ResponseEntity<>("Next update date updated successfully", null, 200);
             } else {
-                return new ApiResponse<>("No interested item found with the given ID", null, 404);
+                return new ResponseEntity<>("No interested item found with the given ID", null, 404);
             }
         } catch (Exception e) {
-            return new ApiResponse<>("Error updating next update date for interested item", null, 500);
+            return new ResponseEntity<>("Error updating next update date for interested item", null, 500);
         }
     }
-    public ApiResponse<Void> createManualInterested(Interested interested) {
+    public ResponseEntity<Void> createManualInterested(Interested interested) {
         try {
             /*String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
             int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, interested.getLead_email(), interested.getWorkspace().toString());
@@ -538,34 +546,39 @@ public class InterestedDao {
 
                 updateHappen = true;
             }
-
-            return new ApiResponse<>(updateHappen ? "Lead created and matched successfully" :"Lead created successfully", null, 201);
+            return ResponseEntity.ok().build();
+            //return new ApiResponse<>(updateHappen ? "Lead created and matched successfully" :"Lead created successfully", null, 201);
         } catch (DataAccessException e) {
-            String errorMessage = "Error creating Lead: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
+            //String errorMessage = "Error creating Lead: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-    public ApiResponse<Void> deleteById(Integer id) {
+    public ResponseEntity<Void> deleteById(Integer id) {
         try {
             String sql = "DELETE FROM interested WHERE id = ?";
             int rowsAffected = jdbcTemplate.update(sql, id);
             if (rowsAffected > 0) {
-                return new ApiResponse<>("Record deleted successfully", null, 200);
+                return ResponseEntity.ok().build();
+                //return new ApiResponse<>("Record deleted successfully", null, 200);
             } else {
-                return new ApiResponse<>("No record found with the given ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No record found with the given ID", null, 404);
             }
         } catch (EmptyResultDataAccessException e) {
             // Handle case where no record is found with the given ID
-            return new ApiResponse<>("No record found with the given ID", null, 404);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            //return new ApiResponse<>("No record found with the given ID", null, 404);
         } catch (DataAccessException e) {
             // Handle other database-related exceptions
-            String errorMessage = "Error deleting record: " + e.getLocalizedMessage();
+            //String errorMessage = "Error deleting record: " + e.getLocalizedMessage();
             e.printStackTrace();
-            return new ApiResponse<>(errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-    public ApiResponse<List<Interested>> getAllByManagerAndBookedIsZero(Integer manager) {
+    public ResponseEntity<List<Interested>> getAllByManagerAndBookedIsZero(Integer manager) {
         try {
             String query = "SELECT i.*, w.name AS workspaceName " +
                     "FROM interested i " +
@@ -576,17 +589,20 @@ public class InterestedDao {
             List<Interested> interestedList = jdbcTemplate.query(query, new BeanPropertyRowMapper<>(Interested.class), manager);
 
             if (interestedList.isEmpty()) {
-                return new ApiResponse<>("No interested items found for the given manager where booked is 0", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No interested items found for the given manager where booked is 0", null, 404);
             } else {
-                return new ApiResponse<>("Interested items retrieved successfully", interestedList, 200);
+                return ResponseEntity.ok(interestedList);
+                //return new ApiResponse<>("Interested items retrieved successfully", interestedList, 200);
             }
         } catch (DataAccessException e) {
             e.printStackTrace();
             // Log or handle the exception
-            return new ApiResponse<>("Error retrieving interested items", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
-    public ApiResponse<String> updateStageAndNextUpdateArray(JsonNode stageUpdates) {
+    public ResponseEntity<String> updateStageAndNextUpdateArray(JsonNode stageUpdates) {
         try {
             int updatedStagesCount = 0;
 
@@ -604,9 +620,9 @@ public class InterestedDao {
                 }
             }
 
-            return new ApiResponse<>("Updated " + updatedStagesCount + " stages with next update date", null, 200);
+            return new ResponseEntity<>("Updated " + updatedStagesCount + " stages with next update date", null, 200);
         } catch (Exception e) {
-            return new ApiResponse<>("Error updating stages and next update date for interested items: " + e.getMessage(), null, 500);
+            return new ResponseEntity<>("Error updating stages and next update date for interested items: " + e.getMessage(), null, 500);
         }
     }
 }

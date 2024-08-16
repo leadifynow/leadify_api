@@ -4,6 +4,8 @@ import com.api.leadify.entity.User;
 import com.api.leadify.entity.WorkspaceUser;
 import com.api.leadify.entity.WorkspaceUser_email;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -18,7 +20,7 @@ public class WorkspaceUserDao {
     @Autowired
     public WorkspaceUserDao(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
 
-    public ApiResponse<List<?>> getByWorkspaceId(UUID workspaceId) {
+    public ResponseEntity<List<?>> getByWorkspaceId(UUID workspaceId) {
         try {
             String sql = "SELECT wu.id, wu.workspace_id, wu.user_id, u.email " +
                     "FROM workspace_user wu " +
@@ -27,35 +29,38 @@ public class WorkspaceUserDao {
             List<WorkspaceUser_email> workspaceUsers = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(WorkspaceUser_email.class), workspaceId.toString());
 
             if (workspaceUsers.isEmpty()) {
-                return new ApiResponse<>("No workspace users found for the given workspace ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No workspace users found for the given workspace ID", null, 404);
             } else {
-                return new ApiResponse<>("Workspace users retrieved successfully", workspaceUsers, 200);
+                return ResponseEntity.ok(workspaceUsers);
+                //return new ApiResponse<>("Workspace users retrieved successfully", workspaceUsers, 200);
             }
         } catch (Exception e) {
-            return new ApiResponse<>("Error retrieving workspace users", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving workspace users", null, 500);
         }
     }
-    public ApiResponse<String> deleteByUserId(int userId) {
+    public ResponseEntity<String> deleteByUserId(int userId) {
         try {
             String sql = "DELETE FROM workspace_user WHERE user_id = ?";
             int affectedRows = jdbcTemplate.update(sql, userId);
 
             if (affectedRows > 0) {
-                return new ApiResponse<>("Workspace user deleted successfully", null, 200);
+                return new ResponseEntity<>("Workspace user deleted successfully", null, 200);
             } else {
-                return new ApiResponse<>("No workspace user found for the given user ID", null, 404);
+                return new ResponseEntity<>("No workspace user found for the given user ID", null, 404);
             }
         } catch (Exception e) {
-            return new ApiResponse<>("Error deleting workspace user", null, 500);
+            return new ResponseEntity<>("Error deleting workspace user", null, 500);
         }
     }
-    public ApiResponse<String> addUserToWorkspace(int userId, UUID workspaceId) {
+    public ResponseEntity<String> addUserToWorkspace(int userId, UUID workspaceId) {
         try {
             String sql = "INSERT INTO workspace_user (user_id, workspace_id) VALUES (?, ?)";
             jdbcTemplate.update(sql, userId, workspaceId.toString());
-            return new ApiResponse<>("User added to workspace successfully", null, 200);
+            return new ResponseEntity<>("User added to workspace successfully", null, 200);
         } catch (Exception e) {
-            return new ApiResponse<>("Error adding user to workspace", null, 500);
+            return new ResponseEntity<>("Error adding user to workspace", null, 500);
         }
     }
     public List<User> searchUsersNotInWorkspace(String searchTerm, UUID workspaceId) {

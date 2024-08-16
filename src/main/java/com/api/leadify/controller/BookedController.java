@@ -1,11 +1,13 @@
 package com.api.leadify.controller;
 
 import com.api.leadify.dao.ApiResponse;
+import com.api.leadify.dao.BookedDao;
 import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Booked;
 import com.api.leadify.entity.Interested;
-import com.api.leadify.service.BookedService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,56 +17,60 @@ import java.util.UUID;
 @CrossOrigin
 @RequestMapping("/api/booked")
 public class BookedController {
-
-    private final BookedService bookedService;
+    private final BookedDao bookedDao;
 
     @Autowired
-    public BookedController(BookedService bookedService) {
-        this.bookedService = bookedService;
+    public BookedController(BookedDao bookedDao) {
+        this.bookedDao = bookedDao;
     }
 
     @PostMapping("/{company_id}")
-    public ApiResponse<Void> createBooked(@PathVariable("company_id") int companyId, @RequestBody Booked booked) {
-        return bookedService.createBooked(companyId, booked);
+    public ResponseEntity<Void> createBooked(@PathVariable("company_id") int companyId, @RequestBody Booked booked) {
+        return bookedDao.createBooked(booked, companyId);
     }
     @GetMapping("/getByCompany/{companyId}/{workspace_id}/{page}/{pageSize}/{filterType}")
-    public ApiResponse<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(@PathVariable("companyId") int companyId, @PathVariable("workspace_id") String workspace_id, @PathVariable int page, @PathVariable int pageSize, @PathVariable int filterType,
+    public ResponseEntity<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(@PathVariable("companyId") int companyId, @PathVariable("workspace_id") String workspace_id, @PathVariable int page, @PathVariable int pageSize, @PathVariable int filterType,
                                                                                 @RequestParam(required = false) String startDate,
                                                                                 @RequestParam(required = false) String endDate) {
-        return bookedService.getAllBookedByCompanyId(companyId, workspace_id, page, pageSize, filterType, startDate, endDate);
+        return bookedDao.getAllBookedByCompanyId(companyId, workspace_id, page, pageSize, filterType, startDate, endDate);
     }
     @GetMapping("/search")
-    public ApiResponse<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId, @RequestParam String workspace) {
-        return bookedService.searchBookedRecords(searchTerm, companyId, workspace);
+    public ResponseEntity<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId, @RequestParam String workspace) {
+        return bookedDao.searchBookedRecords(searchTerm, companyId, workspace);
     }
     @PutMapping("/update/{interestedId}/{bookedId}")
-    public ApiResponse<Booked> updateBookedAndInterested(@PathVariable int interestedId, @PathVariable int bookedId) {
-        return bookedService.updateBookedAndInterested(interestedId, bookedId);
+    public ResponseEntity<Booked> updateBookedAndInterested(@PathVariable int interestedId, @PathVariable int bookedId) {
+        return bookedDao.updateBookedAndInterested(interestedId, bookedId);
     }
     @GetMapping("/getInterestedByBookedId/{bookedId}")
-    public ApiResponse<Interested> getInterestedByBookedId(@PathVariable int bookedId) {
-        return bookedService.getInterestedByBookedId(bookedId);
+    public ResponseEntity<Interested> getInterestedByBookedId(@PathVariable int bookedId) {
+        return bookedDao.getInterestedByBookedId(bookedId);
     }
     @PutMapping("/reset/{interestedId}")
-    public ApiResponse<Void> resetInterestedAndBooked(@PathVariable int interestedId) {
-        return bookedService.resetInterestedAndBooked(interestedId);
+    public ResponseEntity<Void> resetInterestedAndBooked(@PathVariable int interestedId) {
+        return bookedDao.resetInterestedAndBooked(interestedId);
     }
     @GetMapping("/booked/{companyId}/{workspaceId}/{searchParam}/{page}/{pageSize}")
-    public ApiResponse<PaginatedResponse<List<Booked>>> findByCompanyIdAndWorkspaceId(
+    public ResponseEntity<PaginatedResponse<List<Booked>>> findByCompanyIdAndWorkspaceId(
             @PathVariable int companyId,
             @PathVariable(required = false) String workspaceId,
             @PathVariable(required = false) String searchParam,
             @PathVariable int page,
             @PathVariable int pageSize
     ) {
-        return bookedService.findByCompanyIdAndWorkspaceId(companyId, workspaceId, searchParam, page, pageSize);
+        try {
+            return bookedDao.findByCompanyIdAndWorkspaceId(companyId, workspaceId, searchParam, page, pageSize);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
     @PostMapping("/manual_creation")
-    public ApiResponse<Void> createManualBooking (@RequestBody Booked booked) {
-        return bookedService.createManualBooking(booked);
+    public ResponseEntity<Void> createManualBooking (@RequestBody Booked booked) {
+        return bookedDao.createManual(booked);
     }
     @PostMapping("delete/{bookedId}")
-    public ApiResponse<Void> deleteBooked(@PathVariable int bookedId) {
-        return  bookedService.deleteBooked(bookedId);
+    public ResponseEntity<Void> deleteBooked(@PathVariable int bookedId) {
+        return bookedDao.deleteBooked(bookedId);
     }
 }
