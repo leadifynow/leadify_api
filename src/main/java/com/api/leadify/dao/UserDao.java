@@ -2,6 +2,8 @@ package com.api.leadify.dao;
 
 import com.api.leadify.entity.Company;
 import com.api.leadify.entity.User;
+import com.api.leadify.entity.Paths;
+import com.api.leadify.entity.UserPath;
 import com.api.leadify.entity.UserToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -135,7 +137,7 @@ public class UserDao {
             //return new ApiResponse<>("Error retrieving users", null, 500);
         }
     }
-    public ResponseEntity<UserToken> loginUser(User user) {
+    public ResponseEntity<?> loginUser(User user) {
         String sql = "SELECT id, first_name, last_name, email, type_id, theme, remember FROM user WHERE email = ? AND password = ?";
         try {
             Map<String, Object> result = jdbcTemplate.queryForMap(sql, user.getEmail(), user.getPassword());
@@ -150,6 +152,9 @@ public class UserDao {
             loggedInUser.setToken(token); // Set the token
             loggedInUser.setTheme((Boolean) result.get("theme"));
             loggedInUser.setRemember((Boolean) result.get("remember"));
+            Integer typeId = (Integer) result.get("type_id");
+            List<Paths> pathsList = listPath(typeId);
+            loggedInUser.setPathsList(pathsList);
 
             return ResponseEntity.ok(loggedInUser);
             //return new ApiResponse<>("Welcome back " + result.get("email") + "!", loggedInUser, 200);
@@ -159,6 +164,20 @@ public class UserDao {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         //return new ApiResponse<>("Username or password do not exist", null, 404);
     }
+        
+    public List<Paths> listPath(Integer typeId){
+            String sql = "select p.id, p.url from user_path up JOIN paths p ON up.url_id = p.id where type_id= ? ";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, typeId);
+            List<Paths> pathsList = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                Paths path = new Paths();
+                path.setId((Integer) row.get("id"));
+                path.setUrl((String) row.get("url"));
+                pathsList.add(path);
+            }
+            return pathsList;
+    }
+
     public ResponseEntity<List<Company>> getUserCompanies(Integer userId) {
         String adminCheckSql = "SELECT ut.id FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE u.id = ?";
         String allCompaniesSql = "SELECT DISTINCT c.id, c.name, c.location, c.flag, c.industry_id FROM company c";

@@ -39,7 +39,7 @@ public class UserController {
     }
     @PostMapping(value = "/login", produces = "application/json")
     @ResponseBody
-    public ResponseEntity<UserToken> login(@RequestBody User user) {
+    public ResponseEntity<?> login(@RequestBody User user) {
         return userDao.loginUser(user);
     }
     @GetMapping("/getUserCompanies/{userId}")
