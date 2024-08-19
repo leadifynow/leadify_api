@@ -19,7 +19,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 
 public class JWT {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JWT.class);
-	public static final long JWT_TOKEN_VALIDITY = 24 * 60 * 60; // 24 hours
+	public static final long JWT_TOKEN_VALIDITY = 7 * 24 * 60 * 60; // 24 hours
 	public static final String HEADER = "Authorization";
 	public static final String PREFIX = "Bearer ";
 	public static final  String SECRETKEY = "Hay que trabajar, hay que aprender, hay que comer, hay que descansar y también hay que jugar.";
