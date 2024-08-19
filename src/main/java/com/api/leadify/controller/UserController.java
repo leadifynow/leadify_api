@@ -51,14 +51,9 @@ public class UserController {
     public ResponseEntity<List<User>> getUsersByTypeId() {
         return userDao.getUsersByTypeId();
     }
-    /* 
-   
-     *
 
-
-    /* @GetMapping("/statuses")
-    public ResponseEntity<List<StatusDTO>> getAllStatuses() {
-        List<StatusDTO> statuses = orderService.getAllStatuses();
-        return ResponseEntity.ok(statuses);
-    } */
+    @PutMapping("/theme/{userId}/{status}")
+    public ResponseEntity<String> updateUserTheme(@PathVariable Integer userId,@PathVariable boolean status) {
+        return userDao.updateUserTheme(userId,status);
+    }
 }

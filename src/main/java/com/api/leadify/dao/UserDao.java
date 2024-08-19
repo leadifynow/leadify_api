@@ -246,4 +246,21 @@ public class UserDao {
             //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
+
+
+    public ResponseEntity<String> updateUserTheme(Integer userId,boolean status) {
+        String sql = "UPDATE user SET theme=? WHERE id=?";
+
+        try {
+            int updatedRows = jdbcTemplate.update(sql,status,userId);
+
+            if (updatedRows > 0) {
+                return ResponseEntity.ok("User theme updated successfully.");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found or no updates applied");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating user");
+        }
+    }
 }
