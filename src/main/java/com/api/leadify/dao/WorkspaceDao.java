@@ -87,4 +87,22 @@ public class WorkspaceDao {
             //return new ApiResponse<>("Error retrieving workspaces", null, 500);
         }
     }
+
+    public ResponseEntity<String> updateFavWorkspace(String workspaceId,boolean status) {
+        String sql = "UPDATE workspace SET favorite = ? WHERE id = ?";
+        try {
+            int affectedRows = jdbcTemplate.update(
+                    sql,
+                    status,
+                    workspaceId
+            );
+            if (affectedRows > 0) {
+                return ResponseEntity.ok("Favorite workspace updated successfully.");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Workspace not found.");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating favorite workspace.");
+        }
+    }
 }

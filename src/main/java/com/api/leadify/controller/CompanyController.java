@@ -40,4 +40,8 @@ public class CompanyController {
         return companyDao.deleteCompany(companyId);
     }
     
+    @PutMapping("/favoriteCompany/{companyId}/{status}")
+    public ResponseEntity<String> updateFavCompany(@PathVariable Integer companyId,@PathVariable boolean status) {
+        return companyDao.updateFavCompany(companyId,status);
+    }
 }

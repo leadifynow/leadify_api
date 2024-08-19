@@ -31,4 +31,9 @@ public class WorkspaceController {
     public ResponseEntity<List<Workspace>> getWorkspacesByCompanyId(@RequestParam int companyId) {
         return workspaceDao.getWorkspacesByCompanyId(companyId);
     }
+
+    @PutMapping("/favoriteWorkspace/{workspaceId}/{status}")
+    public ResponseEntity<String> updateFavWorkspace(@PathVariable String workspaceId,@PathVariable boolean status) {
+        return workspaceDao.updateFavWorkspace(workspaceId,status);
+    }
 }

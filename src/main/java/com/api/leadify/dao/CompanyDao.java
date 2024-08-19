@@ -83,4 +83,24 @@ public class CompanyDao {
             return new ResponseEntity<>("Error deleting company", null, 500);
         }
     }
+
+
+    public ResponseEntity<String> updateFavCompany(Integer CompanyId,boolean status) {
+        String sql = "UPDATE company SET favorite = ? WHERE id = ?";
+        try {
+            int affectedRows = jdbcTemplate.update(
+                    sql,
+                    status,
+                    CompanyId
+            );
+            if (affectedRows > 0) {
+                return ResponseEntity.ok("Favorite company updated successfully.");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Company not found.");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating favorite company.");
+        }
+    }
+
 }
