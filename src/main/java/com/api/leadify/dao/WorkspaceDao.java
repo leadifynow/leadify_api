@@ -1,6 +1,9 @@
 package com.api.leadify.dao;
 
 import com.api.leadify.entity.Workspace;
+import com.api.leadify.entity.WorkspaceResponse;
+import com.api.leadify.entity.WorkspaceResponse.workspace;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
@@ -30,16 +33,44 @@ public class WorkspaceDao {
         String sql = "INSERT INTO workspace (id, name) VALUES (?, ?)";
         jdbcTemplate.update(sql, workspace.getId().toString(), workspace.getName());
     }
-    public ResponseEntity<List<Workspace>> getAll() {
+    /*
+     * public ResponseEntity<List<WorkspaceResponse>> getAll() {
         try {
-            String sql = "SELECT * FROM workspace";
-            List<Workspace> workspaces = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Workspace.class));
+            String sql = "select w.*,  u.email as users, c.name as client\n" + //
+                                "from workspace w JOIN workspace_user wu ON w.company_id=wu.id \n" + //
+                                "JOIN user u ON wu.user_id=u.id \n" + //
+                                "JOIN company c ON w.company_id=c.id ";
+            List<WorkspaceResponse> WorkspaceResponse = jdbcTemplate.query(sql, (rs, rowNum) -> {
+                WorkspaceResponse workspace = new WorkspaceResponse();
+                WorkspaceResponse.resp favorite = new WorkspaceResponse.resp();
+                WorkspaceResponse.workspace companies = new WorkspaceResponse.workspace();
+                return workspace;
+                });
 
-            if (workspaces.isEmpty()) {
+
+            if (WorkspaceResponse.isEmpty()) {
                  return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
                 //return new ApiResponse<>("No workspaces found", null, 404);
             } else {
-                return ResponseEntity.ok(workspaces);
+                return ResponseEntity.ok(WorkspaceResponse);
+                //return new ApiResponse<>("Workspaces retrieved successfully", workspaces, 200);
+            }
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            //return new ApiResponse<>("Error retrieving workspaces", null, 500);
+        }
+    }
+     */
+    public ResponseEntity<List<Workspace>> getAll() {
+        try {
+            String sql = "SELECT * FROM workspace";
+            List<Workspace> WorkspaceResponse = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Workspace.class));
+
+            if (WorkspaceResponse.isEmpty()) {
+                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                //return new ApiResponse<>("No workspaces found", null, 404);
+            } else {
+                return ResponseEntity.ok(WorkspaceResponse);
                 //return new ApiResponse<>("Workspaces retrieved successfully", workspaces, 200);
             }
         } catch (EmptyResultDataAccessException e) {
