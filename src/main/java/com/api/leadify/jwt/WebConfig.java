@@ -11,16 +11,17 @@ import org.slf4j.LoggerFactory;
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
     private static final Logger LOGGER = LoggerFactory.getLogger(WebConfig.class);
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         // LOGGER.info("CORS POLICY on WebConfig!!!");
-        registry.addMapping("/*")
-        .allowedOrigins("*", "http://localhost:5173")
-        .allowCredentials(false)
-        .allowedHeaders("*")
-        .exposedHeaders("*")
-        .allowedMethods("*")
-        ;
+        registry.addMapping("/**")  // Apply to all endpoints
+                .allowedOrigins("http://localhost:5173", "http://localhost:3000")  // Add all your localhost origins here
+                .allowCredentials(true)  // Allow credentials (cookies, authorization headers)
+                .allowedHeaders("*")  // Allow all headers
+                .exposedHeaders("*")  // Expose all headers
+                .allowedMethods("*");  // Allow all HTTP methods
+
         // LOGGER.info("<-------");
     }
 }
