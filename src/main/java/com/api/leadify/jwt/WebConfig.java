@@ -15,7 +15,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         // LOGGER.info("CORS POLICY on WebConfig!!!");
         registry.addMapping("/*")
-        .allowedOrigins("*")
+        .allowedOrigins("*", "http://localhost:5173")
         .allowCredentials(false)
         .allowedHeaders("*")
         .exposedHeaders("*")
