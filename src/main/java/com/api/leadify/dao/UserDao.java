@@ -166,13 +166,15 @@ public class UserDao {
     }
         
     public List<Paths> listPath(Integer typeId){
-            String sql = "select p.id, p.url from user_path up JOIN paths p ON up.url_id = p.id where type_id= ? ";
+            String sql = "select p.id, p.url, p.icon, p.name from user_path up JOIN paths p ON up.url_id = p.id where type_id= ? ";
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, typeId);
             List<Paths> pathsList = new ArrayList<>();
             for (Map<String, Object> row : rows) {
                 Paths path = new Paths();
                 path.setId((Integer) row.get("id"));
                 path.setUrl((String) row.get("url"));
+                path.setIcon((String) row.get("icon"));
+                path.setName((String) row.get("name"));
                 pathsList.add(path);
             }
             return pathsList;
