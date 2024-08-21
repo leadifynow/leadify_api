@@ -8,7 +8,7 @@ import java.util.List;
 @Getter
 public class WorkspaceResponse {
  public List<resp> favorites;
- public workspace companies;
+ public List<workspace> companies;
  private resp response;
 
 
@@ -20,15 +20,15 @@ public class WorkspaceResponse {
         private String description;
         private String client;
         private String users;
+        private Integer companyId;
         private boolean fav;
     };
 
     @Setter
     @Getter
     public static class workspace{
-        public List<resp> mediablitz;
-        public List<resp> mindful_Agency;
-        public List<resp> leadify_Now;
-        public List<resp> vincent_Koza;
+        private Integer id;
+        private String name;
+        public List<resp> users;
     };
 }

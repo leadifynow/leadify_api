@@ -14,6 +14,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Repository
@@ -49,74 +51,53 @@ public class WorkspaceDao {
                 data.setDescription(rs.getString("description"));
                 data.setUsers(rs.getString("users"));
                 data.setFav(rs.getBoolean("favorite"));
+                data.setCompanyId(rs.getInt("company_id"));
                 work.setResponse(data);
                 return work;
                 });
 
-                WorkspaceResponse workspace = new WorkspaceResponse();
-                WorkspaceResponse.workspace companies = new WorkspaceResponse.workspace();
-                List<WorkspaceResponse.resp> respList = new ArrayList<>();
-                workspace.favorites = new ArrayList<>();
-                companies.mindful_Agency = new ArrayList<>();
-                companies.leadify_Now = new ArrayList<>();
-                companies.mediablitz = new ArrayList<>();
-                companies.vincent_Koza = new ArrayList<>();
+                String query = "select id,name from company";
+                List<WorkspaceResponse.workspace> company= jdbcTemplate.query(query, (rs, rowNum) -> {
+                    WorkspaceResponse.workspace data = new  WorkspaceResponse.workspace();
+                    data.setId(rs.getInt("id"));
+                    data.setName(rs.getString("name"));
+                    data.setUsers(new ArrayList<>()); 
+                    return data;
+                    });
 
-                for (WorkspaceResponse work : WorkspaceResp) {
-                boolean fav=(work.getResponse().isFav());
-                if(fav){
-                     WorkspaceResponse.resp favorite = new WorkspaceResponse.resp();
-                    favorite.setId(work.getResponse().getId());
-                    favorite.setName(work.getResponse().getName());
-                    favorite.setClient(work.getResponse().getClient());
-                    favorite.setDescription(work.getResponse().getDescription());
-                    favorite.setUsers(work.getResponse().getUsers());
-                    favorite.setFav(work.getResponse().isFav());
-                    respList.add(favorite);
+                    WorkspaceResponse workspace = new WorkspaceResponse();
+                    List<WorkspaceResponse.resp> respList = new ArrayList<>();
+                    workspace.favorites = new ArrayList<>();
+                    workspace.companies = new ArrayList<>();
+    
+                    for (WorkspaceResponse work : WorkspaceResp) {
+                    boolean fav=(work.getResponse().isFav());
+                    if(fav){
+                        WorkspaceResponse.resp favorite = new WorkspaceResponse.resp();
+                        favorite.setId(work.getResponse().getId());
+                        favorite.setName(work.getResponse().getName());
+                        favorite.setClient(work.getResponse().getClient());
+                        favorite.setDescription(work.getResponse().getDescription());
+                        favorite.setUsers(work.getResponse().getUsers());
+                        favorite.setFav(work.getResponse().isFav());
+                        respList.add(favorite);
+                    }
+                    for (WorkspaceResponse.workspace data : company) {
+                        if (work.getResponse().getClient().equals(data.getName())) {
+                            WorkspaceResponse.resp info = new WorkspaceResponse.resp();
+                            info.setId(work.getResponse().getId());
+                            info.setName(work.getResponse().getName());
+                            info.setClient(work.getResponse().getClient());
+                            info.setDescription(work.getResponse().getDescription());
+                            info.setUsers(work.getResponse().getUsers());
+                            data.users.add(info);
+                        }
+        
+                    }
                 }
-                String name=(work.getResponse().getClient());
-                if(name.equals("Mindful Agency")){
-                    WorkspaceResponse.resp info = new WorkspaceResponse.resp();
-                    info.setId(work.getResponse().getId());
-                    info.setName(work.getResponse().getName());
-                    info.setClient(work.getResponse().getClient());
-                    info.setDescription(work.getResponse().getDescription());
-                    info.setUsers(work.getResponse().getUsers());
-                    companies.mindful_Agency.add(info);           
-                }
-                if(name.equals("Media Blitz")){
-                    WorkspaceResponse.resp info = new WorkspaceResponse.resp();
-                    info.setId(work.getResponse().getId());
-                    info.setName(work.getResponse().getName());
-                    info.setClient(work.getResponse().getClient());
-                    info.setDescription(work.getResponse().getDescription());
-                    info.setUsers(work.getResponse().getUsers());
-                    companies.mediablitz.add(info);
+                    workspace.setCompanies(company);
+                    workspace.setFavorites(respList);
                     
-                }
-                if(name.equals("Leadify Now")){
-                    WorkspaceResponse.resp info = new WorkspaceResponse.resp();
-                    info.setId(work.getResponse().getId());
-                    info.setName(work.getResponse().getName());
-                    info.setClient(work.getResponse().getClient());
-                    info.setDescription(work.getResponse().getDescription());
-                    info.setUsers(work.getResponse().getUsers());
-                    companies.leadify_Now.add(info);
-                    
-                }
-                if(name.equals("Vincent Koza")){
-                    WorkspaceResponse.resp info = new WorkspaceResponse.resp();
-                    info.setId(work.getResponse().getId());
-                    info.setName(work.getResponse().getName());
-                    info.setClient(work.getResponse().getClient());
-                    info.setDescription(work.getResponse().getDescription());
-                    info.setUsers(work.getResponse().getUsers());
-                    companies.vincent_Koza.add(info); 
-                }
-                }
-                workspace.setCompanies(companies);
-                workspace.setFavorites(respList);
-
 
             if (WorkspaceResp.isEmpty()) {
                  return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
