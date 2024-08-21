@@ -3,14 +3,14 @@ package com.api.leadify.entity;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.List;
-import java.util.Map;
 
 @Setter
 @Getter
 public class WorkspaceResponse {
  public List<resp> favorites;
  public workspace companies;
- 
+ private resp response;
+
 
     @Setter
     @Getter
@@ -20,7 +20,7 @@ public class WorkspaceResponse {
         private String description;
         private String client;
         private String users;
-        private boolean favorite;
+        private boolean fav;
     };
 
     @Setter
@@ -30,6 +30,5 @@ public class WorkspaceResponse {
         public List<resp> mindful_Agency;
         public List<resp> leadify_Now;
         public List<resp> vincent_Koza;
-        private boolean favorite;
     };
 }

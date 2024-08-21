@@ -22,7 +22,7 @@ public class WorkspaceController {
 
 
     @GetMapping("/getWorkspaces")
-    public ResponseEntity<List<Workspace>> getWorkspaces() {
+    public ResponseEntity<WorkspaceResponse> getWorkspaces() {
         return workspaceDao.getAll();
     }
     @PutMapping("/updateWorkspace")
