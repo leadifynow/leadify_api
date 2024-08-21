@@ -29,6 +29,6 @@ public class WorkspaceResponse {
     public static class workspace{
         private Integer id;
         private String name;
-        public List<resp> users;
+        public List<resp> workspaces;
     };
 }

@@ -61,7 +61,7 @@ public class WorkspaceDao {
                     WorkspaceResponse.workspace data = new  WorkspaceResponse.workspace();
                     data.setId(rs.getInt("id"));
                     data.setName(rs.getString("name"));
-                    data.setUsers(new ArrayList<>()); 
+                    data.setWorkspaces(new ArrayList<>());
                     return data;
                     });
 
@@ -90,7 +90,7 @@ public class WorkspaceDao {
                             info.setClient(work.getResponse().getClient());
                             info.setDescription(work.getResponse().getDescription());
                             info.setUsers(work.getResponse().getUsers());
-                            data.users.add(info);
+                            data.workspaces.add(info);
                         }
         
                     }
