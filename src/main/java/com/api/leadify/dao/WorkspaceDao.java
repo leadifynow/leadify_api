@@ -15,7 +15,9 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -49,9 +51,8 @@ public class WorkspaceDao {
                 data.setName(rs.getString("name"));
                 data.setClient(rs.getString("client"));
                 data.setDescription(rs.getString("description"));
-                data.setUsers(rs.getString("users"));
+                data.setUsers(new ArrayList<>());
                 data.setFav(rs.getBoolean("favorite"));
-                data.setCompanyId(rs.getInt("company_id"));
                 work.setResponse(data);
                 return work;
                 });
@@ -59,11 +60,24 @@ public class WorkspaceDao {
                 String query = "select id,name from company";
                 List<WorkspaceResponse.workspace> company= jdbcTemplate.query(query, (rs, rowNum) -> {
                     WorkspaceResponse.workspace data = new  WorkspaceResponse.workspace();
-                    data.setId(rs.getInt("id"));
-                    data.setName(rs.getString("name"));
+                    data.setCompanyId(rs.getInt("id"));
+                    data.setCompanyName(rs.getString("name"));
                     data.setWorkspaces(new ArrayList<>());
                     return data;
                     });
+
+                String names= "select distinct wu.workspace_id as id, u.id as user_id, u.email as name\n" + //
+                                        "from workspace_user wu\n" + //
+                                        "JOIN user u on wu.user_id= u.id";
+
+               List<WorkspaceResponse.user> users= jdbcTemplate.query(names, (rs, rowNum) -> {
+                    WorkspaceResponse.user userdata = new  WorkspaceResponse.user();
+                    userdata.setIdWorkspace(rs.getString("id"));
+                    userdata.setUserId(rs.getInt("user_id"));
+                    userdata.setUserName(rs.getString("name"));
+                    return userdata;
+                    });
+
 
                     WorkspaceResponse workspace = new WorkspaceResponse();
                     List<WorkspaceResponse.resp> respList = new ArrayList<>();
@@ -71,6 +85,19 @@ public class WorkspaceDao {
                     workspace.companies = new ArrayList<>();
     
                     for (WorkspaceResponse work : WorkspaceResp) {
+
+                        for (WorkspaceResponse.user data : users) {
+                            if (work.getResponse().getId().equals(data.getIdWorkspace())) {
+                                WorkspaceResponse.user datauser = new WorkspaceResponse.user();
+                                datauser.setIdWorkspace("");
+                                datauser.setUserId(data.getUserId());
+                                datauser.setUserName(data.getUserName());
+                                work.getResponse().getUsers().add(datauser);
+                            }
+            
+                        }
+
+
                     boolean fav=(work.getResponse().isFav());
                     if(fav){
                         WorkspaceResponse.resp favorite = new WorkspaceResponse.resp();
@@ -83,7 +110,7 @@ public class WorkspaceDao {
                         respList.add(favorite);
                     }
                     for (WorkspaceResponse.workspace data : company) {
-                        if (work.getResponse().getClient().equals(data.getName())) {
+                        if (work.getResponse().getClient().equals(data.getCompanyName())) {
                             WorkspaceResponse.resp info = new WorkspaceResponse.resp();
                             info.setId(work.getResponse().getId());
                             info.setName(work.getResponse().getName());
