@@ -108,6 +108,10 @@ public class BookedDao {
                 sql = "SELECT id FROM workspace WHERE name = ?";
                 workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Royal Logistics - Vincent/Rachel");
                 log.info("Workspace ID for 'Vincent - Rachel : {}", workspaceId);
+            } else if (event_name.equals("Mindful Agency - Initial PR Consultation")) {
+                sql = "SELECT id FROM workspace WHERE name = ?";
+                workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - LinkedIn");
+                log.info("Workspace ID for 'Mindful Agency - LinkedIn : {}", workspaceId);
             } else {
                 log.warn("Invalid event name: {}", event_name);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
