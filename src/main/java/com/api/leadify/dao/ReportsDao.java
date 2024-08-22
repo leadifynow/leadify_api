@@ -2,6 +2,8 @@ package com.api.leadify.dao;
 
 import com.api.leadify.entity.Report;
 import com.api.leadify.entity.ReportResponse;
+import com.api.leadify.entity.WorkspaceResponse;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +17,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Repository
 public class ReportsDao {
@@ -44,6 +48,7 @@ public class ReportsDao {
         String campaignQuery = "SELECT i.campaign_name, COUNT(*) AS count FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ? GROUP BY i.campaign_name";
         String appointmentsByCampaignQuery = "SELECT i.campaign_name, COUNT(*) AS count FROM booked b INNER JOIN interested i ON b.interested_id = i.id JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ? GROUP BY i.campaign_name";
         String emailOccurrencesQuery = "SELECT b.email, COUNT(*) AS count FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ? GROUP BY b.email";
+
 
         Integer totalInterested = null;
         Integer totalBookedMatched = null;
@@ -168,6 +173,7 @@ public class ReportsDao {
                 Map<String, Object> appointmentData = new HashMap<>();
                 appointmentData.put("campaignName", campaignName != null ? campaignName : "Not specified");
                 appointmentData.put("appointmentCount", appointmentCount);
+                appointmentData.put("appointmentCount", appointmentCount);
                 appointmentsByCampaignList.add(appointmentData);
             }
             // Calculate percentages for appointments by campaign
@@ -177,7 +183,8 @@ public class ReportsDao {
                 DecimalFormat df = new DecimalFormat("#.##");
                 String formattedPercentage = df.format(percentage) + "%";
                 appointment.put("percentage", formattedPercentage);
-            }
+            } 
+            
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -219,5 +226,42 @@ public class ReportsDao {
         //return new ApiResponse<>("success", reportResponse, 200);
     }
 
+    public ResponseEntity<List<Map<String, Object>>> getAppointmentsByCampaignRows (String workspace, String[] dates)
+    { 
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String appointmentsByCampaignsql="SELECT distinct i.campaign_name, b.name FROM booked b INNER JOIN interested i ON b.interested_id = i.id JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ?  AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted =0 AND w.company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        List<Map<String, Object>> appointmentsByCampaignList = new ArrayList<>();
+        Map<String, List<String>> campaignToNamesMap = new HashMap<>();
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+
+            List<Map<String, Object>> appointmentsByCampaignRows = jdbcTemplate.queryForList(appointmentsByCampaignsql, workspace, startDate, endDate, companyId);
+
+            for (Map<String, Object> row : appointmentsByCampaignRows) {
+                String campaignName = (String) row.get("campaign_name");
+                String bookedName = (String) row.get("name");
+                if (campaignName != null && bookedName != null) {
+                    List<String> namesList = campaignToNamesMap.getOrDefault(campaignName, new ArrayList<>());
+                    namesList.add(bookedName);
+                    campaignToNamesMap.put(campaignName, namesList);
+                }
+            }
+
+     for (Map.Entry<String, List<String>> entry : campaignToNamesMap.entrySet()) {
+        Map<String, Object> appointmentData = new HashMap<>();
+        appointmentData.put("names", entry.getValue());
+        appointmentData.put("campaignName", entry.getKey());
+        appointmentsByCampaignList.add(appointmentData); 
+     }
+        return ResponseEntity.ok(appointmentsByCampaignList);
+}
 }
 

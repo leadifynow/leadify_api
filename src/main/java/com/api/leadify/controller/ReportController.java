@@ -26,4 +26,8 @@ public class ReportController {
         return reportsDao.getReport(workspace, dates);
     }
 
+    @GetMapping("/appointments/{workspace}/{dates}")
+    public ResponseEntity<?> getAppointments(@PathVariable("workspace") String workspace, @PathVariable("dates") String[] dates) {
+        return reportsDao.getAppointmentsByCampaignRows(workspace, dates);
+    }
 }
