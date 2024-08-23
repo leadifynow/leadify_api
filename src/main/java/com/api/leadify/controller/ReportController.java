@@ -40,4 +40,9 @@ public class ReportController {
     public ResponseEntity<?> getEmailOccurrence (@PathVariable("workspace") String workspace, @PathVariable("dates") String[] dates) {
         return reportsDao.getEmailOccurrences(workspace, dates);
     }
+
+    @GetMapping("/stageData/{workspace}/{dates}")
+    public ResponseEntity<?> getStageData (@PathVariable("workspace") String workspace, @PathVariable("dates") String[] dates) {
+        return reportsDao.getstageData(workspace, dates);
+    }
 }

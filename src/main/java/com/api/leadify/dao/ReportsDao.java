@@ -378,5 +378,73 @@ public class ReportsDao {
     return ResponseEntity.ok(emailOccurrencesOutputList);
 }
 
+    public ResponseEntity<List<Map<String, Object>>> getstageData(String workspace, String[] dates)
+{ 
+    String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+    String stagesQuery = "SELECT id, name FROM stage WHERE workspace_id = ? ORDER BY position_workspace";
+    String nullStageQuery= "SELECT distinct i.firstName,i.lastName FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.stage_id IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+    String getInterestedStage="SELECT distinct i.firstName,i.lastName FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.stage_id = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+    LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+    List<Map<String, Object>> stageDataList = new ArrayList<>();
+    List <String> names= new ArrayList<>();
+    Integer count=0;
+    startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+    endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+    Integer companyId = null;
+        companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+        if (companyId == null) {
+            throw new RuntimeException("Company ID not found for workspace: " + workspace);
+        }
+
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(stagesQuery, workspace);
+            for (Map<String, Object> row : rows) {
+                Integer stageId = (Integer) row.get("id");
+                String stageName = (String) row.get("name");
+                // Count interested per stage
+                List<Map<String, Object>> interestedPerStage = jdbcTemplate.queryForList(getInterestedStage,workspace, stageId, startDate, endDate, companyId);
+                for (Map<String, Object> name : interestedPerStage) {
+                    String interestedfirstName = (String) name.get("firstName");
+                    String interestedlastName = (String) name.get("lastName");
+                    String fullname=interestedfirstName+" "+interestedlastName;
+                    names.add(fullname);
+                    count++;
+                }
+                Map<String, Object> stageData = new HashMap<>();
+                stageData.put("stageName", stageName);
+                stageData.put("interestedCount", count);
+                if(!names.isEmpty()){
+                    stageData.put("Interested Names",new ArrayList<>(names));
+                }
+                stageDataList.add(stageData);
+                names.clear();
+                count=0;
+            }
+
+        List<Map<String, Object>> interestedNullStage = jdbcTemplate.queryForList(nullStageQuery,workspace, startDate, endDate, companyId);
+        if (interestedNullStage != null) {
+            Map<String, Object> nullStageData = new HashMap<>();
+            for (Map<String, Object> name : interestedNullStage) {
+                String interestedfirstName = (String) name.get("firstName");
+                String interestedlastName = (String) name.get("lastName");
+                String fullname=interestedfirstName+" "+interestedlastName;
+                names.add(fullname);
+                count++;
+            }          
+            nullStageData.put("stageName", "Not in stage");
+            nullStageData.put("interestedCount", count);
+            if(!names.isEmpty()){
+                nullStageData.put("Interested Names",new ArrayList<>(names));
+            }
+            stageDataList.add(nullStageData);
+            names.clear();
+            count=0;
+        }
+
+    return ResponseEntity.ok(stageDataList);
+}
+
 }
 
