@@ -314,11 +314,68 @@ public class ReportsDao {
         
      for (Map.Entry<String, List<String>> entry : campaignToNamesMap.entrySet()) {
         Map<String, Object> campaignData = new HashMap<>();
-        campaignData.put("names", entry.getValue());
+        campaignData.put("Interested Names", entry.getValue());
         campaignData.put("campaignName", entry.getKey());
         campaignDataList.add(campaignData); 
      }
         return ResponseEntity.ok(campaignDataList);
+}
+
+    public ResponseEntity<List<Map<String, Object>>> getEmailOccurrences (String workspace, String[] dates)
+{ 
+    String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+    String emailOccurrencesQuery = "SELECT b.email, COUNT(*) AS count FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ? GROUP BY b.email";
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+    LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+    List<Map<String, Object>> emailOccurrencesOutputList = new ArrayList<>();
+    List<String> emails = new ArrayList<>();
+    startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+    endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+    Integer companyId = null;
+        companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+        if (companyId == null) {
+            throw new RuntimeException("Company ID not found for workspace: " + workspace);
+        }
+
+         List<Map<String, Object>> emailOccurrencesRows = jdbcTemplate.queryForList(emailOccurrencesQuery, workspace, startDate, endDate, companyId);
+
+            // Iterate through the email occurrences and calculate percentages
+            Map<Integer, Integer> emailOccurrencesMap = new HashMap<>();
+            for (Map<String, Object> emailOccurrence : emailOccurrencesRows) {
+                int occurrenceCount = ((Number) emailOccurrence.get("count")).intValue();
+                String email = (String) emailOccurrence.get("email");
+                emails.add(email);
+                // Update the count for the occurrence in the map
+                emailOccurrencesMap.put(occurrenceCount, emailOccurrencesMap.getOrDefault(occurrenceCount, 0) + 1);
+            }
+
+            // Clear the existing list
+            emailOccurrencesOutputList.clear();
+
+            // Iterate through the map and add email occurrences to the list
+            for (Map.Entry<Integer, Integer> entry : emailOccurrencesMap.entrySet()) {
+                int occurrenceCount = entry.getKey();
+                int emailCount = entry.getValue();
+
+                // Create a new map entry for the email occurrence
+                Map<String, Object> emailOccurrenceData = new HashMap<>();
+                emailOccurrenceData.put("count", emailCount);
+                emailOccurrenceData.put("text", "Booked " + occurrenceCount + " time" + (occurrenceCount > 1 ? "s" : ""));
+
+                // Calculate percentage based on the total count of occurrences
+                double totalOccurrences = emailOccurrencesMap.values().stream().mapToInt(Integer::intValue).sum();
+                double percentage = ((double) emailCount / totalOccurrences) * 100;
+                DecimalFormat df = new DecimalFormat("#.##");
+                String formattedPercentage = df.format(percentage) + "%";
+                emailOccurrenceData.put("percentage", formattedPercentage);
+
+                emailOccurrenceData.put("emails", emails);
+                // Add the email occurrence data to the list
+                emailOccurrencesOutputList.add(emailOccurrenceData);
+            }
+
+    return ResponseEntity.ok(emailOccurrencesOutputList);
 }
 
 }
