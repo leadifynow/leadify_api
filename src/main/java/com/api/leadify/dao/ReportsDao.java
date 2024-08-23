@@ -263,5 +263,63 @@ public class ReportsDao {
      }
         return ResponseEntity.ok(appointmentsByCampaignList);
 }
+
+    public ResponseEntity<List<Map<String, Object>>> getCampaignData (String workspace, String[] dates)
+    { 
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String campaignQuery = "SELECT distinct i.firstName,i.lastName, i.campaign_name FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        String nullCampaignsQuery="SELECT distinct i.firstName,i.lastName FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        List<Map<String, Object>> campaignDataList = new ArrayList<>();
+
+        Map<String, List<String>> campaignToNamesMap = new HashMap<>();
+
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+
+            List<Map<String, Object>> campaignRows = jdbcTemplate.queryForList(campaignQuery, workspace, startDate, endDate, companyId);
+            for (Map<String, Object> row : campaignRows) {
+                String campaignName = (String) row.get("campaign_name");
+                String interestedfirstName = (String) row.get("firstName");
+                String interestedlastName = (String) row.get("lastName");
+                if (campaignName != null && (interestedfirstName != null || interestedlastName != null)) {
+                    List<String> namesList = campaignToNamesMap.getOrDefault(campaignName, new ArrayList<>());
+                    String fullname=interestedfirstName+" "+interestedlastName;
+                    namesList.add(fullname);
+                    campaignToNamesMap.put(campaignName, namesList);
+                }
+            }
+
+            // Fetch count of interested where campaign_name is null
+            List<Map<String, Object>> interestedNullCampaign = jdbcTemplate.queryForList(nullCampaignsQuery,workspace, startDate, endDate, companyId);
+            if (interestedNullCampaign != null) {
+                for (Map<String, Object> row : interestedNullCampaign ) {
+                    String interestedfirstName = (String) row.get("firstName");
+                    String interestedlastName = (String) row.get("lastName");
+                    if (interestedfirstName != null || interestedlastName != null) {
+                        List<String> namesList = campaignToNamesMap.getOrDefault("Not specified", new ArrayList<>());
+                        String fullname=interestedfirstName+" "+interestedlastName;
+                        namesList.add(fullname);
+                        campaignToNamesMap.put("Not specified", namesList);
+                    }
+                }
+            }
+        
+     for (Map.Entry<String, List<String>> entry : campaignToNamesMap.entrySet()) {
+        Map<String, Object> campaignData = new HashMap<>();
+        campaignData.put("names", entry.getValue());
+        campaignData.put("campaignName", entry.getKey());
+        campaignDataList.add(campaignData); 
+     }
+        return ResponseEntity.ok(campaignDataList);
+}
+
 }
 

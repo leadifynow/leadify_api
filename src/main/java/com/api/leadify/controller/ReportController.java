@@ -30,4 +30,9 @@ public class ReportController {
     public ResponseEntity<?> getAppointments(@PathVariable("workspace") String workspace, @PathVariable("dates") String[] dates) {
         return reportsDao.getAppointmentsByCampaignRows(workspace, dates);
     }
+
+    @GetMapping("/campaign/{workspace}/{dates}")
+    public ResponseEntity<?> getCampaignData (@PathVariable("workspace") String workspace, @PathVariable("dates") String[] dates) {
+        return reportsDao.getCampaignData(workspace, dates);
+    }
 }
