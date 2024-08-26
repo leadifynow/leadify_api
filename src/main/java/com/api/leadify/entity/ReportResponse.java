@@ -5,14 +5,14 @@ import java.util.List;
 import java.util.Map;
 
 public class ReportResponse {
-    private List<Report> reports;
+    private List<Object> reports;
     private String workspace;
     private List<Map<String, Object>> stageData;
     private List<Map<String, Object>> campaignData;
     private List<Map<String, Object>> appointmentsByCampaignData;
     private List<Map<String, Object>> emailOccurrences;
 
-    public ReportResponse(List<Report> reports, String workspace, List<Map<String, Object>> stageData, List<Map<String, Object>> campaignData, List<Map<String, Object>> appointmentsByCampaignData, List<Map<String, Object>> emailOccurrences) {
+    public ReportResponse(List<Object> reports, String workspace, List<Map<String, Object>> stageData, List<Map<String, Object>> campaignData, List<Map<String, Object>> appointmentsByCampaignData, List<Map<String, Object>> emailOccurrences) {
         this.reports = reports;
         this.workspace = workspace;
         this.stageData = stageData;
@@ -21,11 +21,11 @@ public class ReportResponse {
         this.emailOccurrences = emailOccurrences;
     }
 
-    public List<Report> getReports() {
+    public List<Object> getReports() {
         return reports;
     }
 
-    public void setReports(List<Report> reports) {
+    public void setReports(List<Object> reports) {
         this.reports = reports;
     }
 

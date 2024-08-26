@@ -45,4 +45,9 @@ public class ReportController {
     public ResponseEntity<?> getStageData (@PathVariable("workspace") String workspace, @PathVariable("dates") String[] dates) {
         return reportsDao.getstageData(workspace, dates);
     }
+
+    @GetMapping("/report/{workspace}/{dates}")
+    public ResponseEntity<?> getDataReport (@PathVariable("workspace") String workspace, @PathVariable("dates") String[] dates) {
+        return reportsDao.getDataReport(workspace, dates);
+    }
 }
