@@ -52,8 +52,8 @@ public class UserController {
         return userDao.getUsersByTypeId();
     }
 
-    @PutMapping("/theme/{userId}/{status}")
-    public ResponseEntity<String> updateUserTheme(@PathVariable Integer userId,@PathVariable boolean status) {
-        return userDao.updateUserTheme(userId,status);
+    @PutMapping("/theme/{status}")
+    public ResponseEntity<String> updateUserTheme(@PathVariable boolean status) {
+        return userDao.updateUserTheme(status);
     }
 }

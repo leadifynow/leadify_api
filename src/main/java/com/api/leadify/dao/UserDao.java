@@ -3,6 +3,7 @@ package com.api.leadify.dao;
 import com.api.leadify.entity.Company;
 import com.api.leadify.entity.User;
 import com.api.leadify.entity.Paths;
+import com.api.leadify.entity.SessionM;
 import com.api.leadify.entity.UserPath;
 import com.api.leadify.entity.UserToken;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import com.api.leadify.jwt.JWT;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,8 @@ import java.util.Map;
 @Repository
 public class UserDao {
     private final JdbcTemplate jdbcTemplate;
+    @Autowired
+    private HttpServletRequest request;
 
     @Autowired
     public UserDao(JdbcTemplate jdbcTemplate) {
@@ -250,14 +254,16 @@ public class UserDao {
     }
 
 
-    public ResponseEntity<String> updateUserTheme(Integer userId,boolean status) {
+    public ResponseEntity<String> updateUserTheme(boolean status) {
+        SessionM sessionM = JWT.getSession(request);
+        Integer userId = sessionM.getIdUsuario();
         String sql = "UPDATE user SET theme=? WHERE id=?";
 
         try {
             int updatedRows = jdbcTemplate.update(sql,status,userId);
 
             if (updatedRows > 0) {
-                return ResponseEntity.ok("User theme updated successfully.");
+                return ResponseEntity.ok("User theme status: "+status);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found or no updates applied");
             }
