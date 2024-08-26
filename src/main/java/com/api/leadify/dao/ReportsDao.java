@@ -1,6 +1,7 @@
 package com.api.leadify.dao;
 
 import com.api.leadify.entity.Report;
+import com.api.leadify.entity.ReportData;
 import com.api.leadify.entity.ReportResponse;
 import com.api.leadify.entity.WorkspaceResponse;
 
@@ -197,32 +198,29 @@ public class ReportsDao {
         double uniqueEmailsPercentage = ((double) uniqueEmailsBookedMatched / uniqueEmailGeneral) * 100;
         double callsPercentage = ((double) allCallsBooked / allCalls) * 100;
 
-        Report.generalReport reportGeneral = new Report.generalReport();
-        reportGeneral.info = new Report.percentageReport();
-        reportGeneral.names = new Report.infoNames();
-        reportGeneral.info.setLeads(allInterested);
-        reportGeneral.info.setBooked(totalBooked);
-        reportGeneral.info.setUniqueEmails(uniqueEmailGeneral);
-        reportGeneral.info.setMeets(allCalls);
-        reportGeneral.info.setName("General");
 
-        Report.reportUnique report = new Report.reportUnique();
-        report.info = new Report.percentageReport();
-        report.names = new Report.infoNames();
-        report.info.setLeads(totalInterested);
-        report.info.setBooked(totalBookedMatched);
-        report.info.setUniqueEmails(uniqueEmailsBookedMatched);
-        report.info.setMeets(allCallsBooked);
-        report.info.setName(workspaceName);
+        Report reportGeneral = new Report();
+        reportGeneral.setLeads(allInterested);
+        reportGeneral.setBooked(totalBooked);
+        reportGeneral.setUniqueEmails(uniqueEmailGeneral);
+        reportGeneral.setMeets(allCalls);
+        reportGeneral.setName("General");
 
-        Report.percentageReport reportPercentage = new Report.percentageReport();
+        Report report = new Report();
+        report.setLeads(totalInterested);
+        report.setBooked(totalBookedMatched);
+        report.setUniqueEmails(uniqueEmailsBookedMatched);
+        report.setMeets(allCallsBooked);
+        report.setName(workspaceName);
+
+        Report reportPercentage = new Report();
         reportPercentage.setLeads(leadsPercentage);
         reportPercentage.setBooked(bookedPercentage);
         reportPercentage.setUniqueEmails(uniqueEmailsPercentage);
         reportPercentage.setMeets(callsPercentage);
         reportPercentage.setName("% of Total");
 
-        List<Object> reports = List.of(reportGeneral, report, reportPercentage);
+        List<Report> reports = List.of(reportGeneral, report, reportPercentage);
 
         ReportResponse reportResponse = new ReportResponse(reports, workspaceName, stageDataList, campaignDataList, appointmentsByCampaignList, emailOccurrencesOutputList);
         reportResponse.calculateCampaignPercentages(totalInterested);
@@ -527,9 +525,9 @@ public class ReportsDao {
         double uniqueEmailsPercentage = ((double) uniqueEmailsBookedMatched / uniqueEmailGeneral) * 100;
         double callsPercentage = ((double) allCallsBooked / allCalls) * 100;
 
-        Report.generalReport reportGeneral = new Report.generalReport();
-        reportGeneral.info = new Report.percentageReport();
-        reportGeneral.names = new Report.infoNames();
+        ReportData.generalReport reportGeneral = new ReportData.generalReport();
+        reportGeneral.info = new ReportData.percentageReport();
+        reportGeneral.names = new ReportData.infoNames();
         reportGeneral.info.setLeads(allInterested);
         reportGeneral.info.setBooked(totalBooked);
         reportGeneral.info.setUniqueEmails(uniqueEmailGeneral);
@@ -550,9 +548,9 @@ public class ReportsDao {
         reportGeneral.names.setUniqueEmails(uniqueEmailGeneralData);
         reportGeneral.names.setMeets(allCallsData);
 
-        Report.reportUnique report = new Report.reportUnique();
-        report.info = new Report.percentageReport();
-        report.names = new Report.infoNames();
+        ReportData.reportUnique report = new ReportData.reportUnique();
+        report.info = new ReportData.percentageReport();
+        report.names = new ReportData.infoNames();
         report.info.setLeads(totalInterested);
         report.info.setBooked(totalBookedMatched);
         report.info.setUniqueEmails(uniqueEmailsBookedMatched);
@@ -571,7 +569,7 @@ public class ReportsDao {
         report.names.setUniqueEmails(uniqueEmailsBookedMatchedData);
         report.names.setMeets(allCallsBookedData);
 
-        Report.percentageReport reportPercentage = new Report.percentageReport();
+        ReportData.percentageReport reportPercentage = new ReportData.percentageReport();
         reportPercentage.setLeads(leadsPercentage);
         reportPercentage.setBooked(bookedPercentage);
         reportPercentage.setUniqueEmails(uniqueEmailsPercentage);
