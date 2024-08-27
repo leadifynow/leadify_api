@@ -9,41 +9,14 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ReportData {
-    public generalReport general;
-    public reportUnique report;
-    public percentageReport percentage;
-    public infoNames names;
+    private List<Map<String, Object>> leads_general;
+    private List<Map<String, Object>> booked_general;
+    private List<Map<String, Object>>uniqueEmails_general;
+    private List<Map<String, Object>>meets_general;
 
-    @Getter
-    @Setter
-    public static class percentageReport {
-        private double leads;
-        private double booked;
-        private double uniqueEmails;
-        private String name;
-        private double meets;
-    }
+    private List<Map<String, Object>> leads_workspace;
+    private List<Map<String, Object>> booked_workspace;
+    private List<Map<String, Object>>uniqueEmails_workspace;
+    private List<Map<String, Object>>meets_workspace;
 
-    @Getter
-    @Setter
-    public static class infoNames{
-        private List<Map<String, Object>> leads;
-        private List<Map<String, Object>> booked;
-        private List<Map<String, Object>>uniqueEmails;
-        private List<Map<String, Object>>meets;
-    }
-
-    @Getter
-    @Setter
-    public static class generalReport{
-        public percentageReport info;
-        public infoNames names;
-    }
-
-    @Getter
-    @Setter
-    public static class reportUnique{
-        public percentageReport info;
-        public infoNames names;
-    }
 }
