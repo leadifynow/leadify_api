@@ -35,15 +35,15 @@ public class WorkspaceUserDao {
             return new ApiResponse<>("Error retrieving workspace users", null, 500);
         }
     }
-    public ApiResponse<String> deleteByUserId(int userId) {
+    public ApiResponse<String> deleteByUserId(int userId, UUID workspaceId) {
         try {
-            String sql = "DELETE FROM workspace_user WHERE user_id = ?";
-            int affectedRows = jdbcTemplate.update(sql, userId);
+            String sql = "DELETE FROM workspace_user WHERE user_id = ? AND workspace_id = ?";
+            int affectedRows = jdbcTemplate.update(sql, userId, workspaceId);
 
             if (affectedRows > 0) {
                 return new ApiResponse<>("Workspace user deleted successfully", null, 200);
             } else {
-                return new ApiResponse<>("No workspace user found for the given user ID", null, 404);
+                return new ApiResponse<>("No workspace user found for the given user ID and workspace ID", null, 404);
             }
         } catch (Exception e) {
             return new ApiResponse<>("Error deleting workspace user", null, 500);
