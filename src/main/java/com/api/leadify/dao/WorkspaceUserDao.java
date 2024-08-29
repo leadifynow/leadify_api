@@ -41,7 +41,7 @@ public class WorkspaceUserDao {
             System.out.println("Deleting user from workspace: userId=" + userId + ", workspaceId=" + workspaceId);
             String workspaceIdStr = workspaceId.toString();
             String sql = "DELETE FROM workspace_user WHERE user_id = ? AND workspace_id = ?";
-            int affectedRows = jdbcTemplate.update(sql, userId, workspaceId);
+            int affectedRows = jdbcTemplate.update(sql, userId, workspaceIdStr);
 
             if (affectedRows > 0) {
                 return new ApiResponse<>("Workspace user deleted successfully", null, 200);
