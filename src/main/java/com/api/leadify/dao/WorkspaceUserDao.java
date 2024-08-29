@@ -37,6 +37,9 @@ public class WorkspaceUserDao {
     }
     public ApiResponse<String> deleteByUserId(int userId, UUID workspaceId) {
         try {
+            // Log the parameters to debug
+            System.out.println("Deleting user from workspace: userId=" + userId + ", workspaceId=" + workspaceId);
+
             String sql = "DELETE FROM workspace_user WHERE user_id = ? AND workspace_id = ?";
             int affectedRows = jdbcTemplate.update(sql, userId, workspaceId);
 
