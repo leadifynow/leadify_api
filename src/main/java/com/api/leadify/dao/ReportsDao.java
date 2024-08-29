@@ -1,7 +1,6 @@
 package com.api.leadify.dao;
 
 import com.api.leadify.entity.Report;
-import com.api.leadify.entity.ReportData;
 import com.api.leadify.entity.ReportResponse;
 import com.api.leadify.entity.WorkspaceResponse;
 
@@ -46,7 +45,7 @@ public class ReportsDao {
         String allCallsBookedQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.workspace_id = ? AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
         String allInterestedQuery = "SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.created_at BETWEEN ? AND ? AND w.company_id = ?";
         String stagesQuery = "SELECT id, name FROM stage WHERE workspace_id = ? ORDER BY position_workspace";
-        String campaignQuery = "SELECT i.campaign_name, COUNT(*) AS count FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ? GROUP BY i.campaign_name";
+        String campaignQuery = "SELECT i.campaign_name, COUNT(*) AS count FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NOT NULL AND i.campaign_name <> '' AND i.created_at BETWEEN ? AND ? AND w.company_id = ? GROUP BY i.campaign_name";
         String appointmentsByCampaignQuery = "SELECT i.campaign_name, COUNT(*) AS count FROM booked b INNER JOIN interested i ON b.interested_id = i.id JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ? GROUP BY i.campaign_name";
         String emailOccurrencesQuery = "SELECT b.email, COUNT(*) AS count FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ? GROUP BY b.email";
 
@@ -158,7 +157,7 @@ public class ReportsDao {
             }
 
             // Fetch count of interested where campaign_name is null
-            Integer interestedNullCampaign = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?", Integer.class, workspace, startDate, endDate, companyId);
+            Integer interestedNullCampaign = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL OR i.campaign_name = ''  AND i.created_at BETWEEN ? AND ? AND w.company_id = ?", Integer.class, workspace, startDate, endDate, companyId);
             if (interestedNullCampaign != null && interestedNullCampaign > 0) {
                 Map<String, Object> nullCampaignData = new HashMap<>();
                 nullCampaignData.put("campaignName", "Not specified");
@@ -251,8 +250,8 @@ public class ReportsDao {
     public ResponseEntity<List<Map<String, Object>>> getCampaignData (String workspace, String[] dates)
     { 
         String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
-        String campaignQuery = "SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email, i.campaign_name, i.campaign_id , i.created_at  FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
-        String nullCampaignsQuery="SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email , i.created_at FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        String campaignQuery = "SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email, i.campaign_name, i.campaign_id , i.created_at  FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NOT NULL AND i.campaign_name <> '' AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        String nullCampaignsQuery="SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email , i.created_at FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL OR i.campaign_name = '' AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
         LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
@@ -351,19 +350,13 @@ public class ReportsDao {
     return ResponseEntity.ok(stageDataList);
 }
 
-    public ResponseEntity<ReportData> getDataReport (String workspace, String[] dates){
+
+
+    public ResponseEntity<List<Map<String, Object>>> getLeadsGeneral (String workspace, String[] dates){
         String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
 
         String allInterestedQueryNames = "SELECT i.id as interested_id, CONCAT(i.firstName,' ',i.lastName) as name,i.email, i.created_at FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.created_at BETWEEN ? AND ? AND w.company_id = ?";
-        String totalBookedQueryNames = "SELECT id as booked_id, name, email, created_at FROM booked WHERE created_at BETWEEN ? AND ?  AND deleted = 0 AND company_id = ?";
-        String uniqueEmailGeneralQueryNames = "SELECT DISTINCT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.created_at BETWEEN ? AND ?  AND b.deleted = 0 AND w.company_id = ?";
-        String allCallsQueryNames = "SELECT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.meeting_date BETWEEN ? AND ?  AND b.deleted = 0 AND w.company_id = ?";
-
-        String totalInterestedQueryNames = "SELECT i.id as interested_id, CONCAT(i.firstName,' ',i.lastName) as name,i.email, i.created_at FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
-        String totalBookedMatchedQueryNames = "SELECT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NOT NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
-        String uniqueEmailBookedMatchQueryNames = "SELECT DISTINCT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NOT NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
-        String allCallsBookedQueryNames = "SELECT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.workspace_id = ? AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
-
+        
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
         LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
@@ -375,32 +368,164 @@ public class ReportsDao {
                 throw new RuntimeException("Company ID not found for workspace: " + workspace);
             }
 
-        List<Map<String, Object>> allInterestedData = jdbcTemplate.queryForList(allInterestedQueryNames,startDate, endDate, companyId);
-        List<Map<String, Object>> totalBookedData = jdbcTemplate.queryForList(totalBookedQueryNames,startDate, endDate, companyId);
-        List<Map<String, Object>> uniqueEmailGeneralData = jdbcTemplate.queryForList(uniqueEmailGeneralQueryNames, startDate, endDate, companyId);
-        List<Map<String, Object>> allCallsData = jdbcTemplate.queryForList(allCallsQueryNames,startDate, endDate, companyId);
+        List<Map<String, Object>> LeadsGeneral = jdbcTemplate.queryForList(allInterestedQueryNames,startDate, endDate, companyId);
 
-        List<Map<String, Object>> totalInterestedData = jdbcTemplate.queryForList(totalInterestedQueryNames, workspace, startDate, endDate, companyId);
-        List<Map<String, Object>> totalBookedMatchedData = jdbcTemplate.queryForList(totalBookedMatchedQueryNames, workspace, startDate, endDate, companyId);
-        List<Map<String, Object>> uniqueEmailsBookedMatchedData = jdbcTemplate.queryForList(uniqueEmailBookedMatchQueryNames,workspace, startDate, endDate, companyId);
-        List<Map<String, Object>> allCallsBookedData = jdbcTemplate.queryForList(allCallsBookedQueryNames,workspace, startDate, endDate, companyId);
-
-
-        ReportData report= new ReportData();
-        report.setLeads_general(allInterestedData);
-        report.setBooked_general(totalBookedData);
-        report.setUniqueEmails_general(uniqueEmailGeneralData);
-        report.setMeets_general(allCallsData);
-
-        report.setLeads_workspace(totalInterestedData);
-        report.setBooked_workspace(totalBookedMatchedData);
-        report.setUniqueEmails_workspace(uniqueEmailsBookedMatchedData);
-        report.setMeets_workspace(allCallsBookedData);
-
-        return ResponseEntity.ok(report);
+        return ResponseEntity.ok(LeadsGeneral);
     }
 
-    
+    public ResponseEntity<List<Map<String, Object>>> getBookedGeneral (String workspace, String[] dates){
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String totalBookedQueryNames = "SELECT id as booked_id, name, email, created_at FROM booked WHERE created_at BETWEEN ? AND ?  AND deleted = 0 AND company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+
+        List<Map<String, Object>> totalBookedGeneral = jdbcTemplate.queryForList(totalBookedQueryNames,startDate, endDate, companyId);
+
+        return ResponseEntity.ok(totalBookedGeneral);
+    }
+
+    public ResponseEntity<List<Map<String, Object>>> getUniqueEmailsGeneral (String workspace, String[] dates){
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String uniqueEmailGeneralQueryNames = 
+        "WITH UniqueNamesEmails AS (\n" +
+        "    SELECT MIN(b.id) AS min_id, b.name, b.email \n" +
+        "    FROM booked b \n" +
+        "    JOIN workspace w ON b.workspace_id = w.id \n" +
+        "    WHERE b.created_at BETWEEN ? AND ? \n" +
+        "      AND b.deleted = 0 \n" +
+        "      AND w.company_id = ? \n" +
+        "    GROUP BY b.name, b.email \n" +
+        ") \n" +
+        "SELECT b.id AS booked_id, b.name, b.email, b.created_at \n" +
+        "FROM booked b \n" +
+        "JOIN UniqueNamesEmails une ON b.id = une.min_id \n" +
+        "JOIN workspace w ON b.workspace_id = w.id \n" +
+        "WHERE b.created_at BETWEEN ? AND ? \n" +
+        "  AND b.deleted = 0 \n" +
+        "  AND w.company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+
+            Object[] params = new Object[] {
+                startDate,  
+                endDate,    
+                companyId,  
+                startDate,  
+                endDate,    
+                companyId  
+            };
+
+            List<Map<String, Object>> uniqueEmailGeneral = jdbcTemplate.queryForList(uniqueEmailGeneralQueryNames, params);
+
+        return ResponseEntity.ok(uniqueEmailGeneral );
+    }
+
+    public ResponseEntity<List<Map<String, Object>>> getMeetsGeneral (String workspace, String[] dates){
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String allCallsQueryNames = "SELECT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.meeting_date BETWEEN ? AND ?  AND b.deleted = 0 AND w.company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+
+        List<Map<String, Object>> MeetsGeneral = jdbcTemplate.queryForList(allCallsQueryNames,startDate, endDate, companyId);
+        return ResponseEntity.ok(MeetsGeneral);
+    }
+
+    public ResponseEntity<List<Map<String, Object>>> getLeadsWorkspace (String workspace, String[] dates){
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String totalInterestedQueryNames = "SELECT i.id as interested_id, CONCAT(i.firstName,' ',i.lastName) as name,i.email, i.created_at FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+        List<Map<String, Object>> LeadsWorkspace = jdbcTemplate.queryForList(totalInterestedQueryNames, workspace, startDate, endDate, companyId);
+        return ResponseEntity.ok(LeadsWorkspace);
+    }
+
+    public ResponseEntity<List<Map<String, Object>>> getBookedWorkspace (String workspace, String[] dates){
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String totalBookedMatchedQueryNames = "SELECT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NOT NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+
+        List<Map<String, Object>> BookedWorkspace = jdbcTemplate.queryForList(totalBookedMatchedQueryNames, workspace, startDate, endDate, companyId);
+        return ResponseEntity.ok(BookedWorkspace);
+    }
+
+    public ResponseEntity<List<Map<String, Object>>> getUniqueEmailsWorkspace (String workspace, String[] dates){
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String uniqueEmailBookedMatchQueryNames = "SELECT DISTINCT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NOT NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+
+        List<Map<String, Object>> UniqueEmailsWorkspace = jdbcTemplate.queryForList(uniqueEmailBookedMatchQueryNames,workspace, startDate, endDate, companyId);
+        return ResponseEntity.ok(UniqueEmailsWorkspace);
+    }
+
+    public ResponseEntity<List<Map<String, Object>>> getMeetsWorkspace (String workspace, String[] dates){
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String allCallsBookedQueryNames = "SELECT b.id as booked_id, b.name, b.email, b.created_at FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.workspace_id = ? AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+        LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+        startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+        Integer companyId = null;
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+        List<Map<String, Object>> MeetsWorkspace = jdbcTemplate.queryForList(allCallsBookedQueryNames,workspace, startDate, endDate, companyId);
+        return ResponseEntity.ok(MeetsWorkspace);
+    }
+
+
+
     public List<String> getAppoint(String workspace, String[] dates) {
         String IdQuery = "SELECT company_id FROM workspace WHERE id = ?";
         String sql="SELECT distinct i.campaign_name FROM booked b INNER JOIN interested i ON b.interested_id = i.id JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ?  AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted =0 AND w.company_id = ?";
@@ -427,8 +552,8 @@ public class ReportsDao {
     
     public List<String> getCampign(String workspace, String[] dates) {
         String IdQuery = "SELECT company_id FROM workspace WHERE id = ?";
-        String sql="SELECT distinct i.campaign_name FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
-        String sqlnull="SELECT distinct COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        String sql="SELECT distinct i.campaign_name FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NOT NULL AND i.campaign_name <> '' AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        String sqlnull="SELECT distinct COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL OR i.campaign_name = '' AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
         LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
@@ -542,8 +667,8 @@ public class ReportsDao {
     public ResponseEntity<List<Map<String,Object>>> getFilterCampaign( String workspace, String[] dates, String CampName){
         String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
         String getCampignId="SELECT id FROM campaign WHERE campaign_name = ?";
-        String campaignQuery = "SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email, i.campaign_name, i.campaign_id , i.created_at  FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ? AND campaign_id= ?";
-        String nullCampaignsQuery="SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email , i.created_at FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        String campaignQuery = "SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email, i.campaign_name, i.campaign_id , i.created_at  FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NOT NULL AND i.campaign_name <> '' AND i.created_at BETWEEN ? AND ? AND w.company_id = ? AND i.campaign_id=?";
+        String nullCampaignsQuery="SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email , i.created_at FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL OR i.campaign_name = '' AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
         LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
@@ -554,18 +679,27 @@ public class ReportsDao {
             if (companyId == null) {
                 throw new RuntimeException("Company ID not found for workspace: " + workspace);
             }
-        String campId = null;
+        
+        List<Map<String, Object>> CampaignRows =new ArrayList<>();
+        if(!CampName.equals("Not specified")){
+            String campId = null;
             campId = jdbcTemplate.queryForObject(getCampignId, String.class, CampName);
             if (campId == null) {
                 throw new RuntimeException("Campaign ID not found for campaign name: " + CampName);
             }
-        
-        List<Map<String, Object>> CampaignRows =new ArrayList<>();
-        if(!CampName.equals("Not specified")){
+
             CampaignRows = jdbcTemplate.queryForList(campaignQuery, workspace, startDate, endDate, companyId,campId);
         }
         else{
-            CampaignRows = jdbcTemplate.queryForList(nullCampaignsQuery, workspace, startDate, endDate, companyId);
+            CampaignRows = jdbcTemplate.queryForList(nullCampaignsQuery,workspace, startDate, endDate, companyId);
+            if (CampaignRows != null) {
+                for (Map<String, Object> row : CampaignRows) {
+                        if (!row.containsKey("campaign_name")) {
+                            row.put("campaign_id", null); 
+                            row.put("campaign_name", "Not specified"); 
+                        }
+                }
+            }
         }
 
         return ResponseEntity.ok(CampaignRows);
@@ -588,12 +722,39 @@ public class ReportsDao {
         return ResponseEntity.ok(TimesBookedRows);
     }
 
+   public ResponseEntity<List<Map<String,Object>>> getFilterStage( String workspace, String[] dates, String Stage){
+    String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+    String sqlnull= "SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email, i.campaign_name, i.campaign_id , i.created_at FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.stage_id IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+    String sql="SELECT distinct i.id as interested_id, CONCAT(i.firstName , ' ', i.lastName) as name ,i.email, i.campaign_name, i.campaign_id , i.created_at, i.stage_id, s.name as stage_name FROM interested i INNER JOIN stage s ON i.stage_id=s.id JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND s.name=? AND i.created_at BETWEEN ? AND ? AND w.company_id =? ;";
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    LocalDateTime startDate = LocalDateTime.parse(dates[0], formatter);
+    LocalDateTime endDate = LocalDateTime.parse(dates[1], formatter);
+    startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
+    endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
+    Integer companyId = null;
+        companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+        if (companyId == null) {
+            throw new RuntimeException("Company ID not found for workspace: " + workspace);
+        }
 
-    /*
-     *  public ResponseEntity<List<Map<String,Object>>> getFilterStage( String workspace, String[] dates, String Stage){
-        List<Map<String, Object>> stageDataList = new ArrayList<>();
-        return ResponseEntity.ok(stageDataList);
+    List<Map<String, Object>> StageRows =new ArrayList<>();
+    if(!Stage.equals("Not in stage")){
+        StageRows = jdbcTemplate.queryForList(sql,workspace, Stage, startDate, endDate, companyId);
     }
-     */
+    else{
+        StageRows = jdbcTemplate.queryForList(sqlnull, workspace, startDate, endDate, companyId);
+        if (StageRows != null) {
+            for (Map<String, Object> name : StageRows) {
+                if (!name.containsKey("stage_name")) {
+                    name.put("stage_id", null); 
+                    name.put("stage_name", "Not in stage"); 
+                } 
+            }          
+        }
+    }
+
+    return ResponseEntity.ok(StageRows);
+    }
+     
 }
 
