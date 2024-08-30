@@ -1,6 +1,10 @@
 package com.api.leadify.dao;
 
 import com.api.leadify.entity.Company;
+import com.api.leadify.entity.CompanyResponse;
+import com.api.leadify.entity.WorkspaceResponse;
+
+import org.apache.tomcat.util.digester.ArrayStack;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,10 +24,41 @@ public class CompanyDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public List<Company> getCompanies() {
-        String sql = "SELECT * FROM company";
-        return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Company.class));
+    public ResponseEntity<CompanyResponse> getCompanies() {
+        String sql = "select c.* ,i.name as industry from company c JOIN industry i where c.industry_id = i.id";
+        String favsql="select c.* ,i.name as industry from company c JOIN industry i where c.industry_id = i.id and favorite=true";
+        CompanyResponse company=new CompanyResponse();
+        try {
+            List<CompanyResponse.resp> companyList = jdbcTemplate.query(sql, (rs, rowNum) -> {
+                CompanyResponse.resp datas= new CompanyResponse.resp();
+                datas.setId(rs.getInt("id"));
+                datas.setName(rs.getString("name"));
+                datas.setLocation(rs.getString("location"));
+                datas.setIndustry(rs.getString("industry"));
+                datas.setFav(rs.getBoolean("favorite"));
+                return datas;
+                });
+    
+             List<CompanyResponse.resp> companyfav = jdbcTemplate.query(favsql, (rs, rowNum) -> {
+                CompanyResponse.resp datas= new CompanyResponse.resp();
+                datas.setId(rs.getInt("id"));
+                datas.setName(rs.getString("name"));
+                datas.setLocation(rs.getString("location"));
+                datas.setIndustry(rs.getString("industry"));
+                datas.setFav(rs.getBoolean("favorite"));
+                return datas;
+                });
+    
+            company.setCompanyList(companyList);
+            company.setFavorites(companyfav);
+    
+            return ResponseEntity.ok(company);
+        } catch (EmptyStackException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+
     }
+    
     public ResponseEntity<Company> createCompany(Company company) {
         String sql = "INSERT INTO company(name, location, flag, industry_id) VALUES (?, ?, ?, ?)";
         try {

@@ -2,6 +2,7 @@ package com.api.leadify.controller;
 
 import com.api.leadify.dao.CompanyDao;
 import com.api.leadify.entity.Company;
+import com.api.leadify.entity.CompanyResponse;
 import com.api.leadify.entity.Workspace;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -22,9 +23,8 @@ public class CompanyController {
 
     @GetMapping("/getCompanies")
     @ResponseBody
-    public ResponseEntity<List<Company>> getCompanies() {
-        List<Company> companies=companyDao.getCompanies();
-        return ResponseEntity.ok(companies);
+    public ResponseEntity<CompanyResponse> getCompanies() {
+       return companyDao.getCompanies();
     }
     @PostMapping("/createCompany")
     public ResponseEntity<Company> createCompany(@RequestBody Company company) {
