@@ -22,9 +22,11 @@ public class WorkspaceController {
 
 
     @GetMapping("/getWorkspaces")
-    public ResponseEntity<?> getWorkspaces() {
-        return workspaceDao.getAll();
-        //return workspaceDao.getAll("Mindful Agency",4);
+    public ResponseEntity<?> getWorkspaces( 
+        @RequestParam(required = false, defaultValue = "") String ClientName,
+        @RequestParam(required = false, defaultValue = "0") Integer GroupOpc,
+        @RequestParam(required = false, defaultValue = "0") Integer orderBy)  {
+        return workspaceDao.getAllOld(ClientName,GroupOpc,orderBy);
     }
     @PutMapping("/updateWorkspace")
     public ResponseEntity<Workspace> updateWorkspace(@RequestBody Workspace workspace) {

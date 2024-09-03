@@ -5,6 +5,7 @@ import com.api.leadify.entity.WorkspaceResponse;
 import com.api.leadify.entity.WorkspaceResponse.workspace;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,43 +40,73 @@ public class WorkspaceDao {
         jdbcTemplate.update(sql, workspace.getId().toString(), workspace.getName());
     }
 
-    public ResponseEntity<List<Map<String, Object>>> getAllOld(String ClientName, Integer orderBy) { 
-    StringBuilder sql = new StringBuilder ("select w.* ,u.email as users ,c.name as client from workspace w \n" + //
-                "LEFT JOIN workspace_user wu ON w.id=wu.workspace_id \n" + //
-                "LEFT JOIN  user u ON wu.user_id=u.id JOIN company c ON w.company_id=c.id  ");
+    public ResponseEntity<WorkspaceResponse> getAllOld(String ClientName, Integer GroupOpc ,Integer orderBy) { 
+
+    try {
+    StringBuilder sql = new StringBuilder ("select distinct w.* ,c.name as client from workspace w LEFT JOIN workspace_user wu ON w.id=wu.workspace_id  LEFT JOIN company c ON w.company_id=c.id  \n" + //
+                "");
     
     List<Object> parameters = new ArrayList<>();
     if(!ClientName.isEmpty()){
-        sql.append("where c.name= ?");
+        sql.append("where c.name= ? ");
         parameters.add(ClientName);
     }
-    
-    if(orderBy!=0){
-        if(orderBy==1){
-            sql.append("ORDER BY w.updated_at ASC");
+
+    if(GroupOpc!=0){
+        if(GroupOpc==1){
+            sql.append("GROUP BY c.name ");
+            sql.append("ORDER BY c.name ASC ");
         }
-        else if(orderBy==2){
-            sql.append("ORDER BY w.updated_at DESC");
+        else if(GroupOpc==2){
+            sql.append("GROUP BY w.name ");
+            sql.append("ORDER BY w.name ASC ");
         }
-        else if(orderBy==3){
-            sql.append("ORDER BY w.created_at ASC");
+        else if(GroupOpc==3){
+            sql.append("GROUP BY w.id ");
+            sql.append("ORDER BY w.id ASC ");
         }
-        else if(orderBy==4){
-            sql.append("ORDER BY w.created_at DESC");
+        if(orderBy!=0){
+            if(orderBy==1){
+                sql.append(", w.updated_at ASC ");
+            }
+            else if(orderBy==2){
+                sql.append(", w.updated_at DESC ");
+            }
+            else if(orderBy==3){
+                sql.append(", w.created_at ASC ");
+            }
+            else if(orderBy==4){
+                sql.append(", w.created_at DESC ");
+            }
         }
     }
-    String finalSql = sql.toString();
-    List<Map<String, Object>> UniqueEmailsWorkspace = jdbcTemplate.queryForList(finalSql,parameters.toArray());
-     return ResponseEntity.ok(UniqueEmailsWorkspace);
-}
-
-
-    public ResponseEntity<WorkspaceResponse> getAll() { try {
-    String sql = "select w.*,  u.email as users, c.name as client\n" + //
+    if(GroupOpc==0){
+        if(orderBy!=0){
+            if(orderBy==1){
+                sql.append("ORDER BY w.updated_at ASC ");
+            }
+            else if(orderBy==2){
+                sql.append("ORDER BY w.updated_at DESC ");
+            }
+            else if(orderBy==3){
+                sql.append("ORDER BY w.created_at ASC ");
+            }
+            else if(orderBy==4){
+                sql.append("ORDER BY w.created_at DESC ");
+            }
+        }
+    }
+    String finalSql = "";  
+    if (ClientName.isEmpty() && GroupOpc == 0 && orderBy == 0) {
+        finalSql = "select w.*,  u.email as users, c.name as client\n" + //
                         "from workspace w JOIN workspace_user wu ON w.company_id=wu.id \n" + //
                         "JOIN user u ON wu.user_id=u.id \n" + //
                         "JOIN company c ON w.company_id=c.id ";
-    List<WorkspaceResponse> WorkspaceResp = jdbcTemplate.query(sql, (rs, rowNum) -> {
+    }else{
+        finalSql = sql.toString();
+    }
+    List<WorkspaceResponse> WorkspaceResp = jdbcTemplate.query(finalSql,parameters.toArray(), 
+    (rs, rowNum) -> {
         WorkspaceResponse work = new WorkspaceResponse();
         WorkspaceResponse.resp data = new WorkspaceResponse.resp();
         data.setId(rs.getString("id"));
@@ -86,7 +117,8 @@ public class WorkspaceDao {
         data.setFav(rs.getBoolean("favorite"));
         work.setResponse(data);
         return work;
-        });
+    }
+);
 
         String query = "select id,name from company";
         List<WorkspaceResponse.workspace> company= jdbcTemplate.query(query, (rs, rowNum) -> {
@@ -110,25 +142,24 @@ public class WorkspaceDao {
             });
 
 
-            WorkspaceResponse workspace = new WorkspaceResponse();
-            List<WorkspaceResponse.resp> respList = new ArrayList<>();
-            workspace.favorites = new ArrayList<>();
-            workspace.companies = new ArrayList<>();
 
-            for (WorkspaceResponse work : WorkspaceResp) {
+        WorkspaceResponse workspace = new WorkspaceResponse();
+        List<WorkspaceResponse.resp> respList = new ArrayList<>();
+        List<WorkspaceResponse.workspace> clientWorkspace = new ArrayList<>();
+        workspace.favorites = new ArrayList<>();
+        workspace.companies = new ArrayList<>();
 
-                for (WorkspaceResponse.user data : users) {
-                    if (work.getResponse().getId().equals(data.getIdWorkspace())) {
-                        WorkspaceResponse.user datauser = new WorkspaceResponse.user();
-                        datauser.setIdWorkspace("");
-                        datauser.setUserId(data.getUserId());
-                        datauser.setUserName(data.getUserName());
-                        work.getResponse().getUsers().add(datauser);
-                    }
-    
+        for(WorkspaceResponse work:WorkspaceResp){
+            for (WorkspaceResponse.user data : users) {
+                if (work.getResponse().getId().equals(data.getIdWorkspace())) {
+                    WorkspaceResponse.user datauser = new WorkspaceResponse.user();
+                    datauser.setIdWorkspace("");
+                    datauser.setUserId(data.getUserId());
+                    datauser.setUserName(data.getUserName());
+                    work.getResponse().getUsers().add(datauser);
                 }
 
-
+            }
             boolean fav=(work.getResponse().isFav());
             if(fav){
                 WorkspaceResponse.resp favorite = new WorkspaceResponse.resp();
@@ -140,35 +171,55 @@ public class WorkspaceDao {
                 favorite.setFav(work.getResponse().isFav());
                 respList.add(favorite);
             }
-            for (WorkspaceResponse.workspace data : company) {
-                if (work.getResponse().getClient().equals(data.getCompanyName())) {
+
+            boolean added = false;
+    
+            for (WorkspaceResponse.workspace client : clientWorkspace) {
+                if (work.getResponse().getClient().equals(client.getCompanyName())) {
                     WorkspaceResponse.resp info = new WorkspaceResponse.resp();
                     info.setId(work.getResponse().getId());
                     info.setName(work.getResponse().getName());
                     info.setClient(work.getResponse().getClient());
                     info.setDescription(work.getResponse().getDescription());
                     info.setUsers(work.getResponse().getUsers());
-                    data.workspaces.add(info);
+                    client.getWorkspaces().add(info);
+                    added = true;
+                    break;
                 }
-
             }
+            if (!added) {
+                WorkspaceResponse.workspace newWorkspace = new WorkspaceResponse.workspace();
+                for (WorkspaceResponse.workspace data : company) {
+                    if (work.getResponse().getClient().equals(data.getCompanyName())) {
+                        newWorkspace.setCompanyId(data.getCompanyId());
+                        newWorkspace.setCompanyName(data.getCompanyName());
+                    }
+                }  
+                newWorkspace.setWorkspaces(new ArrayList<WorkspaceResponse.resp>());
+                
+                WorkspaceResponse.resp info = new WorkspaceResponse.resp();
+                info.setId(work.getResponse().getId());
+                info.setName(work.getResponse().getName());
+                info.setClient(work.getResponse().getClient());
+                info.setDescription(work.getResponse().getDescription());
+                info.setUsers(work.getResponse().getUsers());
+                newWorkspace.getWorkspaces().add(info);
+                clientWorkspace.add(newWorkspace);
+            }
+        
         }
-            workspace.setCompanies(company);
-            workspace.setFavorites(respList);
-            
-
+    workspace.setCompanies(clientWorkspace);
+    workspace.setFavorites(respList);
     if (WorkspaceResp.isEmpty()) {
-         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        //return new ApiResponse<>("No workspaces found", null, 404);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
     } else {
-
-        return ResponseEntity.ok(workspace);
-        //return new ApiResponse<>("Workspaces retrieved successfully", workspaces, 200);
+       return ResponseEntity.ok(workspace);
     }
-} catch (EmptyResultDataAccessException e) {
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-    //return new ApiResponse<>("Error retrieving workspaces", null, 500);
-}
+
+    } catch (EmptyResultDataAccessException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+
+    }
 }
 
 
