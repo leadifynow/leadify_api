@@ -23,7 +23,7 @@ public class WorkspaceController {
 
     @GetMapping("/getWorkspaces")
     public ResponseEntity<?> getWorkspaces() {
-        return workspaceDao.getAllOld();
+        return workspaceDao.getAll();
         //return workspaceDao.getAll("Mindful Agency",4);
     }
     @PutMapping("/updateWorkspace")

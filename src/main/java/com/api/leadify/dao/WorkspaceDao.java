@@ -39,7 +39,7 @@ public class WorkspaceDao {
         jdbcTemplate.update(sql, workspace.getId().toString(), workspace.getName());
     }
 
-    public ResponseEntity<List<Map<String, Object>>> getAll(String ClientName, Integer orderBy) { 
+    public ResponseEntity<List<Map<String, Object>>> getAllOld(String ClientName, Integer orderBy) { 
     StringBuilder sql = new StringBuilder ("select w.* ,u.email as users ,c.name as client from workspace w \n" + //
                 "LEFT JOIN workspace_user wu ON w.id=wu.workspace_id \n" + //
                 "LEFT JOIN  user u ON wu.user_id=u.id JOIN company c ON w.company_id=c.id  ");
@@ -70,7 +70,7 @@ public class WorkspaceDao {
 }
 
 
-    public ResponseEntity<WorkspaceResponse> getAllOld() { try {
+    public ResponseEntity<WorkspaceResponse> getAll() { try {
     String sql = "select w.*,  u.email as users, c.name as client\n" + //
                         "from workspace w JOIN workspace_user wu ON w.company_id=wu.id \n" + //
                         "JOIN user u ON wu.user_id=u.id \n" + //
