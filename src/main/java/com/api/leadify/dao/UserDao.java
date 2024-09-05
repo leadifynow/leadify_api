@@ -163,6 +163,8 @@ public class UserDao {
             Integer userTypeId = jdbcTemplate.queryForObject(adminCheckSql, Integer.class, userId);
             List<Map<String, Object>> rows;
 
+            System.out.println(userTypeId);
+
             if (userTypeId != null && userTypeId == 1) {
                 // User is an admin, get all companies
                 rows = jdbcTemplate.queryForList(allCompaniesSql);

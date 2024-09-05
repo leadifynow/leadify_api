@@ -1,6 +1,9 @@
 package com.api.leadify.dao;
 
+import com.api.leadify.entity.SessionM;
 import com.api.leadify.entity.Workspace;
+import com.api.leadify.jwt.JWT;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
@@ -62,10 +65,29 @@ public class WorkspaceDao {
             return new ApiResponse<>("Error updating workspace", null, 500);
         }
     }
-    public ApiResponse<List<Workspace>> getWorkspacesByCompanyId(int companyId) {
+    public ApiResponse<List<Workspace>> getWorkspacesByCompanyId(int companyId, HttpServletRequest request) {
         try {
-            String sql = "SELECT * FROM workspace WHERE company_id = ?";
-            List<Workspace> workspaces = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Workspace.class), companyId);
+            // Retrieve the user information from the JWT token
+            SessionM sessionM = JWT.getSession(request);
+            int userId = sessionM.idUsuario;
+
+            // SQL to check if the user is an admin
+            String adminCheckSql = "SELECT ut.id FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE u.id = ?";
+            Integer userTypeId = jdbcTemplate.queryForObject(adminCheckSql, Integer.class, userId);
+
+            List<Workspace> workspaces;
+
+            if (userTypeId != null && userTypeId == 1) {
+                // User is an admin, retrieve all workspaces for the company
+                String sql = "SELECT * FROM workspace WHERE company_id = ?";
+                workspaces = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Workspace.class), companyId);
+            } else {
+                // User is not an admin, retrieve only workspaces the user is associated with
+                String sql = "SELECT w.* FROM workspace w " +
+                        "JOIN workspace_user wu ON w.id = wu.workspace_id " +
+                        "WHERE w.company_id = ? AND wu.user_id = ?";
+                workspaces = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Workspace.class), companyId, userId);
+            }
 
             if (workspaces.isEmpty()) {
                 return new ApiResponse<>("No workspaces found for the given company ID", null, 404);
