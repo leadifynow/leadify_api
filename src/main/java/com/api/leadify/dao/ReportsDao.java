@@ -26,20 +26,22 @@ public class ReportsDao {
     }
 
     public ApiResponse<ReportResponse> getReport(String workspace, String[] dates) {
-        String totalInterestedQuery = "SELECT COUNT(*) FROM interested WHERE workspace = ? AND created_at BETWEEN ? AND ?";
-        String totalBookedMatchedQuery = "SELECT COUNT(*) FROM booked WHERE interested_id IS NOT NULL AND workspace_id = ? AND created_at BETWEEN ? AND ? AND deleted = 0";
-        String uniqueEmailBookedMatchQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE interested_id IS NOT NULL AND workspace_id = ? AND created_at BETWEEN ? AND ? AND deleted = 0";
-        String totalInterestedAndBookedNonMatchedQuery = "SELECT COUNT(*) FROM booked WHERE interested_id IS NULL AND workspace_id = ? AND created_at BETWEEN ? AND ? AND deleted = 0";
-        String totalBookedQuery = "SELECT COUNT(*) FROM booked WHERE created_at BETWEEN ? AND ? AND deleted = 0";
-        String uniqueEmailGeneralQuery = "SELECT COUNT(DISTINCT email) FROM booked WHERE created_at BETWEEN ? AND ? AND deleted = 0";
+        // Queries updated to include company_id by joining workspace
+        String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
+        String totalInterestedQuery = "SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?";
+        String totalBookedMatchedQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NOT NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        String uniqueEmailBookedMatchQuery = "SELECT COUNT(DISTINCT b.email) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NOT NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        String totalInterestedAndBookedNonMatchedQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.interested_id IS NULL AND b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        String totalBookedQuery = "SELECT COUNT(*) FROM booked WHERE created_at BETWEEN ? AND ? AND deleted = 0 AND company_id = ?";
+        String uniqueEmailGeneralQuery = "SELECT COUNT(DISTINCT b.email) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
         String workspaceNameQuery = "SELECT name FROM workspace WHERE id = ?";
-        String allCallsQuery = "SELECT COUNT(*) FROM booked WHERE meeting_date BETWEEN ? AND ? AND deleted = 0";
-        String allCallsBookedQuery = "SELECT COUNT(*) FROM booked WHERE workspace_id = ? AND interested_id IS NOT NULL AND meeting_date BETWEEN ? AND ? AND deleted = 0";
-        String allInterestedQuery = "SELECT COUNT(*) FROM interested WHERE created_at BETWEEN ? AND ?";
+        String allCallsQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        String allCallsBookedQuery = "SELECT COUNT(*) FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.workspace_id = ? AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ?";
+        String allInterestedQuery = "SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.created_at BETWEEN ? AND ? AND w.company_id = ?";
         String stagesQuery = "SELECT id, name FROM stage WHERE workspace_id = ? ORDER BY position_workspace";
-        String campaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM interested WHERE workspace = ? AND created_at BETWEEN ? AND ? GROUP BY campaign_name";
-        String appointmentsByCampaignQuery = "SELECT campaign_name, COUNT(*) AS count FROM booked b INNER JOIN interested i ON b.interested_id = i.id WHERE i.workspace = ? AND interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND deleted = 0 GROUP BY campaign_name";
-        String emailOccurrencesQuery = "SELECT email, COUNT(*) AS count FROM booked WHERE workspace_id = ? AND created_at BETWEEN ? AND ? AND deleted = 0 GROUP BY email";
+        String campaignQuery = "SELECT i.campaign_name, COUNT(*) AS count FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ? GROUP BY i.campaign_name";
+        String appointmentsByCampaignQuery = "SELECT i.campaign_name, COUNT(*) AS count FROM booked b INNER JOIN interested i ON b.interested_id = i.id JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND b.interested_id IS NOT NULL AND b.meeting_date BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ? GROUP BY i.campaign_name";
+        String emailOccurrencesQuery = "SELECT b.email, COUNT(*) AS count FROM booked b JOIN workspace w ON b.workspace_id = w.id WHERE b.workspace_id = ? AND b.created_at BETWEEN ? AND ? AND b.deleted = 0 AND w.company_id = ? GROUP BY b.email";
 
         Integer totalInterested = null;
         Integer totalBookedMatched = null;
@@ -63,21 +65,28 @@ public class ReportsDao {
         startDate = startDate.withHour(0).withMinute(0).withSecond(0).withNano(0);
         endDate = endDate.withHour(23).withMinute(59).withSecond(59).withNano(59);
 
+        Integer companyId = null;
         try {
+            // Fetch the company_id for the given workspace
+            companyId = jdbcTemplate.queryForObject(getCompanyIdQuery, Integer.class, workspace);
+            if (companyId == null) {
+                throw new RuntimeException("Company ID not found for workspace: " + workspace);
+            }
+
             workspaceName = jdbcTemplate.queryForObject(workspaceNameQuery, String.class, workspace);
-            totalInterested = jdbcTemplate.queryForObject(totalInterestedQuery, Integer.class, workspace, startDate, endDate);
-            totalBookedMatched = jdbcTemplate.queryForObject(totalBookedMatchedQuery, Integer.class, workspace, startDate, endDate);
-            uniqueEmailsBookedMatched = jdbcTemplate.queryForObject(uniqueEmailBookedMatchQuery, Integer.class, workspace, startDate, endDate);
-            totalInterestedAndBookedNonMatched = jdbcTemplate.queryForObject(totalInterestedAndBookedNonMatchedQuery, Integer.class, workspace, startDate, endDate);
-            totalBooked = jdbcTemplate.queryForObject(totalBookedQuery, Integer.class, startDate, endDate);
-            uniqueEmailGeneral = jdbcTemplate.queryForObject(uniqueEmailGeneralQuery, Integer.class, startDate, endDate);
-            allCalls = jdbcTemplate.queryForObject(allCallsQuery, Integer.class, startDate, endDate);
-            allCallsBooked = jdbcTemplate.queryForObject(allCallsBookedQuery, Integer.class, workspace, startDate, endDate);
-            allInterested = jdbcTemplate.queryForObject(allInterestedQuery, Integer.class, startDate, endDate);
+            totalInterested = jdbcTemplate.queryForObject(totalInterestedQuery, Integer.class, workspace, startDate, endDate, companyId);
+            totalBookedMatched = jdbcTemplate.queryForObject(totalBookedMatchedQuery, Integer.class, workspace, startDate, endDate, companyId);
+            uniqueEmailsBookedMatched = jdbcTemplate.queryForObject(uniqueEmailBookedMatchQuery, Integer.class, workspace, startDate, endDate, companyId);
+            totalInterestedAndBookedNonMatched = jdbcTemplate.queryForObject(totalInterestedAndBookedNonMatchedQuery, Integer.class, workspace, startDate, endDate, companyId);
+            totalBooked = jdbcTemplate.queryForObject(totalBookedQuery, Integer.class, startDate, endDate, companyId);
+            uniqueEmailGeneral = jdbcTemplate.queryForObject(uniqueEmailGeneralQuery, Integer.class, startDate, endDate, companyId);
+            allCalls = jdbcTemplate.queryForObject(allCallsQuery, Integer.class, startDate, endDate, companyId);
+            allCallsBooked = jdbcTemplate.queryForObject(allCallsBookedQuery, Integer.class, workspace, startDate, endDate, companyId);
+            allInterested = jdbcTemplate.queryForObject(allInterestedQuery, Integer.class, startDate, endDate, companyId);
 
-            List<Map<String, Object>> emailOccurrencesRows = jdbcTemplate.queryForList(emailOccurrencesQuery, workspace, startDate, endDate);
+            List<Map<String, Object>> emailOccurrencesRows = jdbcTemplate.queryForList(emailOccurrencesQuery, workspace, startDate, endDate, companyId);
 
-// Iterate through the email occurrences and calculate percentages
+            // Iterate through the email occurrences and calculate percentages
             Map<Integer, Integer> emailOccurrencesMap = new HashMap<>();
             for (Map<String, Object> emailOccurrence : emailOccurrencesRows) {
                 int occurrenceCount = ((Number) emailOccurrence.get("count")).intValue();
@@ -86,10 +95,10 @@ public class ReportsDao {
                 emailOccurrencesMap.put(occurrenceCount, emailOccurrencesMap.getOrDefault(occurrenceCount, 0) + 1);
             }
 
-// Clear the existing list
+            // Clear the existing list
             emailOccurrencesOutputList.clear();
 
-// Iterate through the map and add email occurrences to the list
+            // Iterate through the map and add email occurrences to the list
             for (Map.Entry<Integer, Integer> entry : emailOccurrencesMap.entrySet()) {
                 int occurrenceCount = entry.getKey();
                 int emailCount = entry.getValue();
@@ -116,13 +125,13 @@ public class ReportsDao {
                 Integer stageId = (Integer) row.get("id");
                 String stageName = (String) row.get("name");
                 // Count interested per stage
-                Integer interestedPerStage = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested WHERE workspace = ? AND stage_id = ? AND created_at BETWEEN ? AND ?", Integer.class, workspace, stageId, startDate, endDate);
+                Integer interestedPerStage = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.stage_id = ? AND i.created_at BETWEEN ? AND ? AND w.company_id = ?", Integer.class, workspace, stageId, startDate, endDate, companyId);
                 Map<String, Object> stageData = new HashMap<>();
                 stageData.put("stageName", stageName);
                 stageData.put("interestedCount", interestedPerStage);
                 stageDataList.add(stageData);
             }
-            Integer interestedNullStage = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested WHERE workspace = ? AND stage_id IS NULL AND created_at BETWEEN ? AND ?", Integer.class, workspace, startDate, endDate);
+            Integer interestedNullStage = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.stage_id IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?", Integer.class, workspace, startDate, endDate, companyId);
             if (interestedNullStage != null && interestedNullStage > 0) {
                 Map<String, Object> nullStageData = new HashMap<>();
                 nullStageData.put("stageName", "Not in stage");
@@ -130,7 +139,7 @@ public class ReportsDao {
                 stageDataList.add(nullStageData);
             }
 
-            List<Map<String, Object>> campaignRows = jdbcTemplate.queryForList(campaignQuery, workspace, startDate, endDate);
+            List<Map<String, Object>> campaignRows = jdbcTemplate.queryForList(campaignQuery, workspace, startDate, endDate, companyId);
             for (Map<String, Object> row : campaignRows) {
                 String campaignName = (String) row.get("campaign_name");
                 Integer interestedCount = ((Number) row.get("count")).intValue();
@@ -141,7 +150,7 @@ public class ReportsDao {
             }
 
             // Fetch count of interested where campaign_name is null
-            Integer interestedNullCampaign = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested WHERE workspace = ? AND campaign_name IS NULL AND created_at BETWEEN ? AND ?", Integer.class, workspace, startDate, endDate);
+            Integer interestedNullCampaign = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM interested i JOIN workspace w ON i.workspace = w.id WHERE i.workspace = ? AND i.campaign_name IS NULL AND i.created_at BETWEEN ? AND ? AND w.company_id = ?", Integer.class, workspace, startDate, endDate, companyId);
             if (interestedNullCampaign != null && interestedNullCampaign > 0) {
                 Map<String, Object> nullCampaignData = new HashMap<>();
                 nullCampaignData.put("campaignName", "Not specified");
@@ -150,7 +159,7 @@ public class ReportsDao {
             }
 
             // Logic for appointments by campaign
-            List<Map<String, Object>> appointmentsByCampaignRows = jdbcTemplate.queryForList(appointmentsByCampaignQuery, workspace, startDate, endDate);
+            List<Map<String, Object>> appointmentsByCampaignRows = jdbcTemplate.queryForList(appointmentsByCampaignQuery, workspace, startDate, endDate, companyId);
             for (Map<String, Object> row : appointmentsByCampaignRows) {
                 String campaignName = (String) row.get("campaign_name");
                 Integer appointmentCount = ((Number) row.get("count")).intValue();
@@ -205,5 +214,6 @@ public class ReportsDao {
         reportResponse.calculateCampaignPercentages(totalInterested);
         return new ApiResponse<>("success", reportResponse, 200);
     }
+
 }
 

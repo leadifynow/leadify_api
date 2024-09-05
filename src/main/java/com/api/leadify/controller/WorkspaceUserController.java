@@ -23,9 +23,9 @@ public class WorkspaceUserController {
     public ApiResponse<List<?>> getWorkspaceUsersByWorkspaceId(@PathVariable UUID workspaceId) {
         return workspaceUserService.getByWorkspaceId(workspaceId);
     }
-    @DeleteMapping("/deleteByUserId/{userId}")
-    public ApiResponse<String> deleteWorkspaceUserByUserId(@PathVariable int userId) {
-        return workspaceUserService.deleteByUserId(userId);
+    @DeleteMapping("/deleteByUserId/{userId}/{workspaceId}")
+    public ApiResponse<String> deleteWorkspaceUserByUserId(@PathVariable int userId, @PathVariable UUID workspaceId) {
+        return workspaceUserService.deleteByUserId(userId, workspaceId);
     }
     @PostMapping("/addUserToWorkspace")
     public ApiResponse<String> addUserToWorkspace(@RequestParam int userId, @RequestParam UUID workspaceId) {

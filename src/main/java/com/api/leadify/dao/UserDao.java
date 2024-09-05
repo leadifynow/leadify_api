@@ -148,7 +148,9 @@ public class UserDao {
         return new ApiResponse<>("Username or password do not exist", null, 404);
     }
     public ApiResponse<List<Company>> getUserCompanies(Integer userId) {
-        String sql = "SELECT DISTINCT c.id, c.name, c.location, c.flag, c.industry_id " +
+        String adminCheckSql = "SELECT ut.id FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE u.id = ?";
+        String allCompaniesSql = "SELECT DISTINCT c.id, c.name, c.location, c.flag, c.industry_id FROM company c";
+        String userCompaniesSql = "SELECT DISTINCT c.id, c.name, c.location, c.flag, c.industry_id " +
                 "FROM user u " +
                 "JOIN user_type ut ON u.type_id = ut.id " +
                 "JOIN workspace_user wu ON u.id = wu.user_id " +
@@ -157,7 +159,17 @@ public class UserDao {
                 "WHERE u.id = ?";
 
         try {
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, userId);
+            // Check if the user is an admin
+            Integer userTypeId = jdbcTemplate.queryForObject(adminCheckSql, Integer.class, userId);
+            List<Map<String, Object>> rows;
+
+            if (userTypeId != null && userTypeId == 1) {
+                // User is an admin, get all companies
+                rows = jdbcTemplate.queryForList(allCompaniesSql);
+            } else {
+                // User is not an admin, get companies associated with the user
+                rows = jdbcTemplate.queryForList(userCompaniesSql, userId);
+            }
 
             List<Company> companyList = new ArrayList<>();
 
@@ -180,6 +192,7 @@ public class UserDao {
             return new ApiResponse<>("Error retrieving companies", null, 500);
         }
     }
+
     public ApiResponse<List<User>> getUsersByTypeId() {
         int typeId = 1;
         try {

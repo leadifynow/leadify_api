@@ -47,7 +47,6 @@ public class InterestedDao {
 
         try {
             System.out.println(interested);
-            // comentario de prueba
             // Sacamos los valores que necesitamos para validaciones, etc
             UUID workspaceId = interested.getWorkspace();
             UUID campaignId = interested.getCampaign_id();
@@ -58,7 +57,9 @@ public class InterestedDao {
             String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
             int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, leadEmail, workspaceId.toString());
 
-            if (emailCount > 0 && !Objects.equals(campaignName, "Didn't Close Re-Engage Campaign")) {
+            if (emailCount > 0 && !Objects.equals(campaignName, "Didn't Close Re-Engage Campaign")
+                    && !Objects.equals(campaignName, "No Shows/Ghosted/ Didn’t close | Subscription")
+                    && !Objects.equals(campaignName, "Previous Clients | Subscription")) {
                 // Email already exists, do nothing
                 return;
             }
@@ -490,12 +491,12 @@ public class InterestedDao {
     }
     public ApiResponse<Void> createManualInterested(Interested interested) {
         try {
-            String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
+            /*String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
             int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, interested.getLead_email(), interested.getWorkspace().toString());
 
             if (emailCount > 0) {
                 return new ApiResponse<>("Lead already exists", null, 500);
-            }
+            }*/
 
             String sql = "INSERT INTO interested (campaign_name, event_type, workspace, campaign_id, lead_email, email, lastName, firstName, companyName, stage_id, notes, booked, manager, next_update) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

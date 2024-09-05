@@ -19,8 +19,8 @@ public class WorkspaceUserService {
     public ApiResponse<List<?>> getByWorkspaceId(UUID workspaceId) {
         return workspaceUserDao.getByWorkspaceId(workspaceId);
     }
-    public ApiResponse<String> deleteByUserId(int userId) {
-        return workspaceUserDao.deleteByUserId(userId);
+    public ApiResponse<String> deleteByUserId(int userId, UUID workspaceId) {
+        return workspaceUserDao.deleteByUserId(userId, workspaceId);
     }
     public ApiResponse<String> addUserToWorkspace(int userId, UUID workspaceId) {
         return workspaceUserDao.addUserToWorkspace(userId, workspaceId);
