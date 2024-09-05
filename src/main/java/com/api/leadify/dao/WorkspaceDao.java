@@ -40,187 +40,174 @@ public class WorkspaceDao {
         jdbcTemplate.update(sql, workspace.getId().toString(), workspace.getName());
     }
 
-    public ResponseEntity<WorkspaceResponse> getAllOld(String ClientName, Integer GroupOpc ,Integer orderBy) { 
+    public ResponseEntity<WorkspaceResponse> getAllOld(String ClientName, Integer GroupOpc, Integer orderBy) {
+        try {
+            StringBuilder sql = new StringBuilder(
+                    "SELECT DISTINCT w.*, c.name AS client FROM workspace w " +
+                            "LEFT JOIN workspace_user wu ON w.id = wu.workspace_id " +
+                            "LEFT JOIN company c ON w.company_id = c.id ");
 
-    try {
-    StringBuilder sql = new StringBuilder ("select distinct w.* ,c.name as client from workspace w LEFT JOIN workspace_user wu ON w.id=wu.workspace_id  LEFT JOIN company c ON w.company_id=c.id  \n" + //
-                "");
-    
-    List<Object> parameters = new ArrayList<>();
-    if(!ClientName.isEmpty()){
-        sql.append("where c.name= ? ");
-        parameters.add(ClientName);
-    }
+            List<Object> parameters = new ArrayList<>();
 
-    if(GroupOpc!=0){
-        if(GroupOpc==1){
-            sql.append("GROUP BY c.name ");
-            sql.append("ORDER BY c.name ASC ");
-        }
-        else if(GroupOpc==2){
-            sql.append("GROUP BY w.name ");
-            sql.append("ORDER BY w.name ASC ");
-        }
-        else if(GroupOpc==3){
-            sql.append("GROUP BY w.id ");
-            sql.append("ORDER BY w.id ASC ");
-        }
-        if(orderBy!=0){
-            if(orderBy==1){
-                sql.append(", w.updated_at ASC ");
+            // Check if ClientName is provided and add it to the SQL query
+            if (ClientName != null && !ClientName.isEmpty()) {
+                sql.append("WHERE c.name = ? ");
+                parameters.add(ClientName);
             }
-            else if(orderBy==2){
-                sql.append(", w.updated_at DESC ");
-            }
-            else if(orderBy==3){
-                sql.append(", w.created_at ASC ");
-            }
-            else if(orderBy==4){
-                sql.append(", w.created_at DESC ");
-            }
-        }
-    }
-    if(GroupOpc==0){
-        if(orderBy!=0){
-            if(orderBy==1){
-                sql.append("ORDER BY w.updated_at ASC ");
-            }
-            else if(orderBy==2){
-                sql.append("ORDER BY w.updated_at DESC ");
-            }
-            else if(orderBy==3){
-                sql.append("ORDER BY w.created_at ASC ");
-            }
-            else if(orderBy==4){
-                sql.append("ORDER BY w.created_at DESC ");
-            }
-        }
-    }
-    String finalSql = "";  
-    if (ClientName.isEmpty() && GroupOpc == 0 && orderBy == 0) {
-        finalSql = "select w.*,  u.email as users, c.name as client\n" + //
-                        "from workspace w JOIN workspace_user wu ON w.company_id=wu.id \n" + //
-                        "JOIN user u ON wu.user_id=u.id \n" + //
-                        "JOIN company c ON w.company_id=c.id ";
-    }else{
-        finalSql = sql.toString();
-    }
-    List<WorkspaceResponse> WorkspaceResp = jdbcTemplate.query(finalSql,parameters.toArray(), 
-    (rs, rowNum) -> {
-        WorkspaceResponse work = new WorkspaceResponse();
-        WorkspaceResponse.resp data = new WorkspaceResponse.resp();
-        data.setId(rs.getString("id"));
-        data.setName(rs.getString("name"));
-        data.setClient(rs.getString("client"));
-        data.setDescription(rs.getString("description"));
-        data.setUsers(new ArrayList<>());
-        data.setFav(rs.getBoolean("favorite"));
-        work.setResponse(data);
-        return work;
-    }
-);
 
-        String query = "select id,name from company";
-        List<WorkspaceResponse.workspace> company= jdbcTemplate.query(query, (rs, rowNum) -> {
-            WorkspaceResponse.workspace data = new  WorkspaceResponse.workspace();
-            data.setCompanyId(rs.getInt("id"));
-            data.setCompanyName(rs.getString("name"));
-            data.setWorkspaces(new ArrayList<>());
-            return data;
-            });
-
-        String names= "select distinct wu.workspace_id as id, u.id as user_id, u.email as name\n" + //
-                                "from workspace_user wu\n" + //
-                                "JOIN user u on wu.user_id= u.id";
-
-       List<WorkspaceResponse.user> users= jdbcTemplate.query(names, (rs, rowNum) -> {
-            WorkspaceResponse.user userdata = new  WorkspaceResponse.user();
-            userdata.setIdWorkspace(rs.getString("id"));
-            userdata.setUserId(rs.getInt("user_id"));
-            userdata.setUserName(rs.getString("name"));
-            return userdata;
-            });
-
-
-
-        WorkspaceResponse workspace = new WorkspaceResponse();
-        List<WorkspaceResponse.resp> respList = new ArrayList<>();
-        List<WorkspaceResponse.workspace> clientWorkspace = new ArrayList<>();
-        workspace.favorites = new ArrayList<>();
-        workspace.companies = new ArrayList<>();
-
-        for(WorkspaceResponse work:WorkspaceResp){
-            for (WorkspaceResponse.user data : users) {
-                if (work.getResponse().getId().equals(data.getIdWorkspace())) {
-                    WorkspaceResponse.user datauser = new WorkspaceResponse.user();
-                    datauser.setIdWorkspace("");
-                    datauser.setUserId(data.getUserId());
-                    datauser.setUserName(data.getUserName());
-                    work.getResponse().getUsers().add(datauser);
+            // Check GroupOpc and apply groupings
+            if (GroupOpc != null && GroupOpc != 0) {
+                if (GroupOpc == 1) {
+                    sql.append("GROUP BY c.name ");
+                    sql.append("ORDER BY c.name ASC ");
+                } else if (GroupOpc == 2) {
+                    sql.append("GROUP BY w.name ");
+                    sql.append("ORDER BY w.name ASC ");
+                } else if (GroupOpc == 3) {
+                    sql.append("GROUP BY w.id ");
+                    sql.append("ORDER BY w.id ASC ");
                 }
 
-            }
-            boolean fav=(work.getResponse().isFav());
-            if(fav){
-                WorkspaceResponse.resp favorite = new WorkspaceResponse.resp();
-                favorite.setId(work.getResponse().getId());
-                favorite.setName(work.getResponse().getName());
-                favorite.setClient(work.getResponse().getClient());
-                favorite.setDescription(work.getResponse().getDescription());
-                favorite.setUsers(work.getResponse().getUsers());
-                favorite.setFav(work.getResponse().isFav());
-                respList.add(favorite);
-            }
-
-            boolean added = false;
-    
-            for (WorkspaceResponse.workspace client : clientWorkspace) {
-                if (work.getResponse().getClient().equals(client.getCompanyName())) {
-                    WorkspaceResponse.resp info = new WorkspaceResponse.resp();
-                    info.setId(work.getResponse().getId());
-                    info.setName(work.getResponse().getName());
-                    info.setClient(work.getResponse().getClient());
-                    info.setDescription(work.getResponse().getDescription());
-                    info.setUsers(work.getResponse().getUsers());
-                    client.getWorkspaces().add(info);
-                    added = true;
-                    break;
-                }
-            }
-            if (!added) {
-                WorkspaceResponse.workspace newWorkspace = new WorkspaceResponse.workspace();
-                for (WorkspaceResponse.workspace data : company) {
-                    if (work.getResponse().getClient().equals(data.getCompanyName())) {
-                        newWorkspace.setCompanyId(data.getCompanyId());
-                        newWorkspace.setCompanyName(data.getCompanyName());
+                // Apply ordering based on the `orderBy` value
+                if (orderBy != null && orderBy != 0) {
+                    switch (orderBy) {
+                        case 1:
+                            sql.append(", w.updated_at ASC ");
+                            break;
+                        case 2:
+                            sql.append(", w.updated_at DESC ");
+                            break;
+                        case 3:
+                            sql.append(", w.created_at ASC ");
+                            break;
+                        case 4:
+                            sql.append(", w.created_at DESC ");
+                            break;
                     }
-                }  
-                newWorkspace.setWorkspaces(new ArrayList<WorkspaceResponse.resp>());
-                
-                WorkspaceResponse.resp info = new WorkspaceResponse.resp();
-                info.setId(work.getResponse().getId());
-                info.setName(work.getResponse().getName());
-                info.setClient(work.getResponse().getClient());
-                info.setDescription(work.getResponse().getDescription());
-                info.setUsers(work.getResponse().getUsers());
-                newWorkspace.getWorkspaces().add(info);
-                clientWorkspace.add(newWorkspace);
+                }
+            } else if (GroupOpc == 0 && orderBy != null && orderBy != 0) {
+                // Handle ordering without GroupOpc
+                switch (orderBy) {
+                    case 1:
+                        sql.append("ORDER BY w.updated_at ASC ");
+                        break;
+                    case 2:
+                        sql.append("ORDER BY w.updated_at DESC ");
+                        break;
+                    case 3:
+                        sql.append("ORDER BY w.created_at ASC ");
+                        break;
+                    case 4:
+                        sql.append("ORDER BY w.created_at DESC ");
+                        break;
+                }
             }
-        
+
+            // Default query for retrieving all companies and workspaces if no filters are applied
+            String finalSql;
+            if ((ClientName == null || ClientName.isEmpty()) && (GroupOpc == null || GroupOpc == 0) && (orderBy == null || orderBy == 0)) {
+                finalSql = "SELECT w.*, u.email AS users, c.name AS client " +
+                        "FROM workspace w " +
+                        "JOIN workspace_user wu ON w.id = wu.workspace_id " +
+                        "JOIN user u ON wu.user_id = u.id " +
+                        "JOIN company c ON w.company_id = c.id ";
+            } else {
+                finalSql = sql.toString();
+            }
+
+            // Execute query
+            List<WorkspaceResponse> WorkspaceResp = jdbcTemplate.query(finalSql, parameters.toArray(),
+                    (rs, rowNum) -> {
+                        WorkspaceResponse work = new WorkspaceResponse();
+                        WorkspaceResponse.resp data = new WorkspaceResponse.resp();
+                        data.setId(rs.getString("id"));
+                        data.setName(rs.getString("name"));
+                        data.setClient(rs.getString("client"));
+                        data.setDescription(rs.getString("description"));
+                        data.setUsers(new ArrayList<>());
+                        data.setFav(rs.getBoolean("favorite"));
+                        work.setResponse(data);
+                        return work;
+                    }
+            );
+
+            // Query to retrieve all companies
+            String query = "SELECT id, name FROM company";
+            List<WorkspaceResponse.workspace> company = jdbcTemplate.query(query, (rs, rowNum) -> {
+                WorkspaceResponse.workspace data = new WorkspaceResponse.workspace();
+                data.setCompanyId(rs.getInt("id"));
+                data.setCompanyName(rs.getString("name"));
+                data.setWorkspaces(new ArrayList<>());
+                return data;
+            });
+
+            // Query to retrieve users for each workspace
+            String names = "SELECT DISTINCT wu.workspace_id AS id, u.id AS user_id, u.email AS name " +
+                    "FROM workspace_user wu " +
+                    "JOIN user u ON wu.user_id = u.id";
+
+            List<WorkspaceResponse.user> users = jdbcTemplate.query(names, (rs, rowNum) -> {
+                WorkspaceResponse.user userdata = new WorkspaceResponse.user();
+                userdata.setIdWorkspace(rs.getString("id"));
+                userdata.setUserId(rs.getInt("user_id"));
+                userdata.setUserName(rs.getString("name"));
+                return userdata;
+            });
+
+            // Process the retrieved data
+            WorkspaceResponse workspace = new WorkspaceResponse();
+            List<WorkspaceResponse.resp> respList = new ArrayList<>();
+            List<WorkspaceResponse.workspace> clientWorkspace = new ArrayList<>();
+            workspace.favorites = new ArrayList<>();
+            workspace.companies = new ArrayList<>();
+
+            for (WorkspaceResponse work : WorkspaceResp) {
+                for (WorkspaceResponse.user data : users) {
+                    if (work.getResponse().getId().equals(data.getIdWorkspace())) {
+                        work.getResponse().getUsers().add(data);
+                    }
+                }
+
+                if (work.getResponse().isFav()) {
+                    respList.add(work.getResponse());
+                }
+
+                boolean added = false;
+                for (WorkspaceResponse.workspace client : clientWorkspace) {
+                    if (work.getResponse().getClient().equals(client.getCompanyName())) {
+                        client.getWorkspaces().add(work.getResponse());
+                        added = true;
+                        break;
+                    }
+                }
+
+                if (!added) {
+                    WorkspaceResponse.workspace newWorkspace = new WorkspaceResponse.workspace();
+                    for (WorkspaceResponse.workspace data : company) {
+                        if (work.getResponse().getClient().equals(data.getCompanyName())) {
+                            newWorkspace.setCompanyId(data.getCompanyId());
+                            newWorkspace.setCompanyName(data.getCompanyName());
+                        }
+                    }
+                    newWorkspace.setWorkspaces(new ArrayList<>());
+                    newWorkspace.getWorkspaces().add(work.getResponse());
+                    clientWorkspace.add(newWorkspace);
+                }
+            }
+
+            workspace.setCompanies(clientWorkspace);
+            workspace.setFavorites(respList);
+
+            if (WorkspaceResp.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            } else {
+                return ResponseEntity.ok(workspace);
+            }
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
-    workspace.setCompanies(clientWorkspace);
-    workspace.setFavorites(respList);
-    if (WorkspaceResp.isEmpty()) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-    } else {
-       return ResponseEntity.ok(workspace);
     }
 
-    } catch (EmptyResultDataAccessException e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-
-    }
-}
 
 
     public ResponseEntity<Workspace> updateWorkspace(Workspace workspace) {
