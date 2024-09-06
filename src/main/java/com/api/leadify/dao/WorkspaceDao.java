@@ -1,9 +1,12 @@
 package com.api.leadify.dao;
 
+import com.api.leadify.entity.SessionM;
 import com.api.leadify.entity.Workspace;
 import com.api.leadify.entity.WorkspaceResponse;
 import com.api.leadify.entity.WorkspaceResponse.workspace;
 
+import com.api.leadify.jwt.JWT;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -208,8 +211,6 @@ public class WorkspaceDao {
         }
     }
 
-
-
     public ResponseEntity<Workspace> updateWorkspace(Workspace workspace) {
         try {
             String sql = "UPDATE workspace SET name = ?, description = ?, company_id = ? WHERE id = ?";
@@ -268,4 +269,59 @@ public class WorkspaceDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating favorite workspace.");
         }
     }
+
+    public ResponseEntity<List<WorkspaceResponse.resp>> getWorkspacesForUserOrAdmin(HttpServletRequest request) {
+        try {
+            // Retrieve the user session from the JWT
+            SessionM sessionM = JWT.getSession(request);
+            Integer userId = sessionM.getIdUsuario();
+
+            // SQL to check if the user is an admin
+            String adminCheckSql = "SELECT u.type_id FROM user u WHERE u.id = ?";
+            Integer userTypeId = jdbcTemplate.queryForObject(adminCheckSql, new Object[]{userId}, Integer.class);
+
+            // SQL to get all workspaces if the user is an admin
+            String sql;
+            List<Object> parameters = new ArrayList<>();
+
+            if (userTypeId != null && userTypeId == 1) {
+                // Admin user, retrieve all workspaces
+                sql = "SELECT DISTINCT w.*, c.name AS client " +
+                        "FROM workspace w " +
+                        "LEFT JOIN company c ON w.company_id = c.id";
+            } else {
+                // Regular user, retrieve only workspaces the user has access to
+                sql = "SELECT DISTINCT w.*, c.name AS client " +
+                        "FROM workspace w " +
+                        "JOIN workspace_user wu ON w.id = wu.workspace_id " +
+                        "JOIN company c ON w.company_id = c.id " +
+                        "WHERE wu.user_id = ?";
+                parameters.add(userId);
+            }
+
+            // Execute the query with the proper parameters
+            List<WorkspaceResponse.resp> workspaces = jdbcTemplate.query(sql, parameters.toArray(),
+                    (rs, rowNum) -> {
+                        WorkspaceResponse.resp workspace = new WorkspaceResponse.resp();
+                        workspace.setId(rs.getString("id"));
+                        workspace.setName(rs.getString("name"));
+                        workspace.setClient(rs.getString("client"));
+                        workspace.setDescription(rs.getString("description"));
+                        workspace.setFav(rs.getBoolean("favorite"));
+                        return workspace;
+                    }
+            );
+
+            if (workspaces.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            } else {
+                return ResponseEntity.ok(workspaces);
+            }
+
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+
 }

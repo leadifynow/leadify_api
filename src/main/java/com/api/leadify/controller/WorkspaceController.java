@@ -1,10 +1,10 @@
 package com.api.leadify.controller;
 
-import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.WorkspaceDao;
 import com.api.leadify.entity.Workspace;
 import com.api.leadify.entity.WorkspaceResponse;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,5 +40,9 @@ public class WorkspaceController {
     @PutMapping("/favoriteWorkspace/{workspaceId}/{status}")
     public ResponseEntity<String> updateFavWorkspace(@PathVariable String workspaceId,@PathVariable boolean status) {
         return workspaceDao.updateFavWorkspace(workspaceId,status);
+    }
+    @GetMapping("/getUserOrAdminWorkspaces")
+    public ResponseEntity<List<WorkspaceResponse.resp>> getWorkspacesForUserOrAdmin(HttpServletRequest request) {
+        return workspaceDao.getWorkspacesForUserOrAdmin(request);
     }
 }
