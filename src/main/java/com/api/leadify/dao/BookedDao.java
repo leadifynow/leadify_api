@@ -71,7 +71,7 @@ public class BookedDao {
                 } catch (DataAccessException e) {
                     log.error("DataAccessException: ", e);
                 }
-            } else if (event_name.equals("Mindful Agency - Strategy PR Consultation")) {
+            } else if (event_name.equals("Mindful Agency - Strategy PR Consultation") || event_name.equals("Mindful Agency - Connect")) {
                 sql = "SELECT id FROM workspace WHERE name = ?";
                 try {
                     workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Natalie");
