@@ -4,6 +4,10 @@ import com.api.leadify.dao.CompanyDao;
 import com.api.leadify.entity.Company;
 import com.api.leadify.entity.CompanyResponse;
 import com.api.leadify.entity.Workspace;
+import com.api.leadify.entity.WorkspaceResponse;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
@@ -43,5 +47,10 @@ public class CompanyController {
     @PutMapping("/favoriteCompany/{companyId}/{status}")
     public ResponseEntity<String> updateFavCompany(@PathVariable Integer companyId,@PathVariable boolean status) {
         return companyDao.updateFavCompany(companyId,status);
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<?> getDashboard(@RequestParam(required = false, defaultValue = "") String Search) {
+        return companyDao.getDashboardData(Search);
     }
 }

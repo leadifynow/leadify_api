@@ -2,7 +2,14 @@ package com.api.leadify.dao;
 
 import com.api.leadify.entity.Company;
 import com.api.leadify.entity.CompanyResponse;
+import com.api.leadify.entity.DashboardResponse;
+import com.api.leadify.entity.Interested;
+import com.api.leadify.entity.SessionM;
+import com.api.leadify.entity.User;
 import com.api.leadify.entity.WorkspaceResponse;
+import com.api.leadify.jwt.JWT;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.tomcat.util.digester.ArrayStack;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +25,8 @@ import java.util.List;
 @Repository
 public class CompanyDao {
     private final JdbcTemplate jdbcTemplate;
+    @Autowired
+    private HttpServletRequest request;
 
     @Autowired
     public CompanyDao(JdbcTemplate jdbcTemplate) {
@@ -136,6 +145,94 @@ public class CompanyDao {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating favorite company.");
         }
+    }
+
+    public ResponseEntity<DashboardResponse> getDashboardData(String Search){
+        Integer limit=3;
+        String searchTermLike = "%" + Search + "%";
+        String searchTermNull = "%" + "" + "%";
+        boolean normalclient=false;
+        boolean normalworkspaces=false;
+       
+        String clientSQL = "SELECT c.id, c.name AS clients, c.favorite, COUNT(w.id) AS workspaces, COUNT(wu.user_id) as users  FROM company c LEFT JOIN workspace w ON c.id = w.company_id \n" + //
+        "LEFT JOIN workspace_user wu ON w.id = wu.workspace_id where c.name LIKE ?\n" + //
+        "GROUP BY c.id order by c.updated_at DESC LIMIT ?;";
+        String clientFavoriteSQL="SELECT c.id, c.name AS clients, c.favorite, COUNT(w.id) AS workspaces, COUNT(wu.user_id) as users  FROM company c LEFT JOIN workspace w ON c.id = w.company_id \n" + //
+        "LEFT JOIN workspace_user wu ON w.id = wu.workspace_id where c.favorite=1 and c.name LIKE ?\n" + //
+        "GROUP BY c.id order by c.updated_at DESC LIMIT ?;";
+        String workspaceSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description, w.favorite from workspace w \n" + //
+        "join company c on w.company_id=c.id where w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
+        String workspaceFavoriteSQL="select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w \n" + //
+        "join company c on w.company_id=c.id where w.favorite=1 and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
+        String userSQL = "select wu.id, u.email as name, wu.updated_at as date from workspace_user wu join user u on wu.user_id=u.id group by u.id order by wu.updated_at DESC LIMIT ?;";
+       
+        String workspaceUserSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w left join workspace_user wu on w.id=wu.workspace_id\n" + //
+                        "join company c on w.company_id=c.id where wu.user_id=? and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
+        String workspaceUserFavoriteSQL="select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w left join workspace_user wu on w.id=wu.workspace_id\n" + //
+                        "join company c on w.company_id=c.id where wu.user_id=? and w.favorite=1 and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
+
+        DashboardResponse dash= new DashboardResponse();
+        List<DashboardResponse.clientsResp> clientList;
+        List<DashboardResponse.clientsResp> clientFavList;
+        List<DashboardResponse.workspaceResp> workspaceList;
+        List<DashboardResponse.workspaceResp> workspaceFavoriteList;
+        List<DashboardResponse.userResp> UserList;
+
+        SessionM sessionM = JWT.getSession(request);
+        Integer userId = sessionM.getIdUsuario();
+
+        String adminCheckSql = "select type_id from user where id=?;";
+        Integer userTypeId = jdbcTemplate.queryForObject(adminCheckSql, Integer.class, userId);
+
+        if(userTypeId==1){
+                clientFavList = jdbcTemplate.query(clientFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermNull,limit);
+                if(clientFavList.size()<3){
+                    clientList = jdbcTemplate.query(clientSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermNull,limit);
+                    normalclient=true;
+                    clientFavList=clientList;
+                }
+                workspaceFavoriteList = jdbcTemplate.query(workspaceFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermNull,limit);
+                if(workspaceFavoriteList.size()<3){
+                    workspaceList = jdbcTemplate.query(workspaceSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermNull,limit);
+                    normalworkspaces=true;
+                    workspaceFavoriteList=workspaceList;
+                }
+                if(!Search.isEmpty()){
+                    if(normalclient== true){
+                        clientFavList = jdbcTemplate.query(clientSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermLike ,limit);
+                    }else{
+                        clientFavList = jdbcTemplate.query(clientFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermLike,limit);
+                    }
+                    if(normalworkspaces== true){
+                        workspaceFavoriteList = jdbcTemplate.query(workspaceSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermLike ,limit);  
+                    }else{
+                        workspaceFavoriteList = jdbcTemplate.query(workspaceFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermLike ,limit);
+
+                    }
+                }
+            UserList = jdbcTemplate.query(userSQL, new BeanPropertyRowMapper<>(DashboardResponse.userResp.class),limit);
+            dash.setClients(clientFavList);
+            dash.setWorksapces(workspaceFavoriteList);
+            dash.setUserWorkspaces(UserList);
+        }
+        else{
+            workspaceFavoriteList = jdbcTemplate.query(workspaceUserFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermNull,limit);
+                if(workspaceFavoriteList.size()<3){
+                    workspaceList = jdbcTemplate.query(workspaceUserSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermNull,limit);
+                    normalworkspaces=true;
+                    workspaceFavoriteList=workspaceList;
+                }
+                if(!Search.isEmpty()){
+                    if(normalworkspaces== true){
+                        workspaceFavoriteList = jdbcTemplate.query(workspaceUserSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermLike ,limit);  
+                    }else{
+                        workspaceFavoriteList = jdbcTemplate.query(workspaceUserFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermLike ,limit);
+                    }  
+                }
+                dash.setWorksapces(workspaceFavoriteList);
+        }
+
+        return ResponseEntity.ok(dash);
     }
 
 }
