@@ -500,15 +500,9 @@ public class InterestedDao {
             return new ResponseEntity<>("Error updating next update date for interested item", null, 500);
         }
     }
-    public ResponseEntity<Void> createManualInterested(Interested interested) {
+    public ResponseEntity<Interested> createManualInterested(Interested interested) {
         try {
-            /*String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
-            int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, interested.getLead_email(), interested.getWorkspace().toString());
-
-            if (emailCount > 0) {
-                return new ApiResponse<>("Lead already exists", null, 500);
-            }*/
-
+            // Insert the new Interested record
             String sql = "INSERT INTO interested (campaign_name, event_type, workspace, campaign_id, lead_email, email, lastName, firstName, companyName, stage_id, notes, booked, manager, next_update) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -522,20 +516,26 @@ public class InterestedDao {
                     interested.getLastName(),
                     interested.getFirstName(),
                     interested.getCompanyName(),
-                    null, // Assuming stage_id is an Integer
+                    null,  // Assuming stage_id is an Integer
                     interested.getNotes(),
-                    false,
-                    null,
-                    null
+                    false, // Default booked to false
+                    null,  // manager
+                    null   // next_update
             );
 
             // Get the generated interested_id
             String getInterestedIdQuery = "SELECT LAST_INSERT_ID()";
             int interestedId = jdbcTemplate.queryForObject(getInterestedIdQuery, Integer.class);
+
+            // Fetch the newly created Interested record
+            String fetchNewInterestedQuery = "SELECT * FROM interested WHERE id = ?";
+            Interested newInterested = jdbcTemplate.queryForObject(fetchNewInterestedQuery, new BeanPropertyRowMapper<>(Interested.class), interestedId);
+
             // Check if the email exists in the booked table
             String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ? AND (workspace_id = ? OR workspace_id IS NULL)";
             int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, interested.getLead_email(), interested.getWorkspace().toString());
             Boolean updateHappen = false;
+
             if (emailExistsInBooked > 0) {
                 // If the email exists in booked table, update booked status to 1
                 String updateInterestedQuery = "UPDATE interested SET booked = 1 WHERE lead_email = ?";
@@ -546,15 +546,14 @@ public class InterestedDao {
 
                 updateHappen = true;
             }
-            return ResponseEntity.ok().build();
-            //return new ApiResponse<>(updateHappen ? "Lead created and matched successfully" :"Lead created successfully", null, 201);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(newInterested);
         } catch (DataAccessException e) {
-            //String errorMessage = "Error creating Lead: " + Objects.requireNonNullElse(e.getLocalizedMessage(), "Unknown error");
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-            //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
+
     public ResponseEntity<Void> deleteById(Integer id) {
         try {
             String sql = "DELETE FROM interested WHERE id = ?";

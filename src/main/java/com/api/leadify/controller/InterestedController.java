@@ -65,7 +65,7 @@ public class InterestedController {
         return interestedDao.updateNextUpdateDate(interestedId, nextUpdateDate);
     }
     @PostMapping("/createManual")
-    public ResponseEntity<Void> createManualInterested(@RequestBody Interested interested) {
+    public ResponseEntity<Interested> createManualInterested(@RequestBody Interested interested) {
         return interestedDao.createManualInterested(interested);
     }
     @DeleteMapping("/{id}")
