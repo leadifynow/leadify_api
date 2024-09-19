@@ -1,6 +1,9 @@
 package com.api.leadify.dao;
 
+import com.api.leadify.entity.SessionM;
 import com.api.leadify.entity.UserColumns;
+import com.api.leadify.jwt.JWT;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -19,28 +22,31 @@ public class UserColumnsDao {
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
+    private HttpServletRequest request;
+    @Autowired
     public UserColumnsDao(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ResponseEntity<List<UserColumns>> getUserColumnsByUserIdAndWorkspaceId(Integer userId, String workspaceId) {
+    public ResponseEntity<List<UserColumns>> getUserColumnsByWorkspaceId(String workspaceId) {
+        SessionM sessionM = JWT.getSession(request);
+        Integer userId = sessionM.getIdUsuario();  // Get userId from the token
+
         try {
             String sql = "SELECT * FROM user_columns WHERE user_id = ? AND workspace_id = ?";
             List<UserColumns> userColumns = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(UserColumns.class), userId, workspaceId);
+
             if (userColumns.isEmpty()) {
                 // If no columns are found, insert default columns and return the newly created record
-                addUserColumns(new UserColumns( userId, workspaceId));
+                addUserColumns(new UserColumns(userId, workspaceId));
                 // Fetch the newly created record
                 userColumns = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(UserColumns.class), userId, workspaceId);
                 return ResponseEntity.ok(userColumns);
-                //return new ApiResponse<>("Added default columns.", userColumns, 200);
             } else {
                 return ResponseEntity.ok(userColumns);
-                //return new ApiResponse<>("User columns retrieved successfully", userColumns, 200);
             }
         } catch (EmptyResultDataAccessException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-            //return new ApiResponse<>("Error retrieving user columns", null, 500);
         }
     }
     public void addUserColumns(UserColumns userColumns) {

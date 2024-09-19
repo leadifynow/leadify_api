@@ -21,9 +21,9 @@ public class UserColumnsController {
         this.userColumnsDao = userColumnsDao;
     }
 
-    @GetMapping("/{userId}/{workspaceId}")
-    public ResponseEntity<List<UserColumns>> getUserColumnsByUserIdAndWorkspaceId(@PathVariable Integer userId, @PathVariable String workspaceId) {
-        return userColumnsDao.getUserColumnsByUserIdAndWorkspaceId(userId, workspaceId);
+    @GetMapping("/{workspaceId}")
+    public ResponseEntity<List<UserColumns>> getUserColumnsByWorkspaceId(@PathVariable String workspaceId) {
+        return userColumnsDao.getUserColumnsByWorkspaceId(workspaceId);  // Use the method without userId parameter
     }
     @PutMapping("/update")
     public ResponseEntity<UserColumns> updateUserColumns(@RequestBody UserColumns userColumns) {
