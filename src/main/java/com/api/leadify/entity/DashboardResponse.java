@@ -15,6 +15,9 @@ public List<clientsResp> clients;
  @Getter
  public static class clientsResp{
      private Integer id;
+     private String location;
+     private String flag;
+     private String industry;
      private String clients;
      private boolean favorite;
      private long workspaces;
@@ -36,5 +39,6 @@ public List<clientsResp> clients;
  public static class userResp{
      private Integer id;
      private String name;
+     private String type;
  };
 }

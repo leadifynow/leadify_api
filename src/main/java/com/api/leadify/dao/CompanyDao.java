@@ -151,25 +151,37 @@ public class CompanyDao {
         Integer limit=3;
         String searchTermLike = "%" + Search + "%";
         String searchTermNull = "%" + "" + "%";
-        boolean normalclient=false;
-        boolean normalworkspaces=false;
-       
-        String clientSQL = "SELECT c.id, c.name AS clients, c.favorite, COUNT(w.id) AS workspaces, COUNT(wu.user_id) as users  FROM company c LEFT JOIN workspace w ON c.id = w.company_id \n" + //
-        "LEFT JOIN workspace_user wu ON w.id = wu.workspace_id where c.name LIKE ?\n" + //
-        "GROUP BY c.id order by c.updated_at DESC LIMIT ?;";
-        String clientFavoriteSQL="SELECT c.id, c.name AS clients, c.favorite, COUNT(w.id) AS workspaces, COUNT(wu.user_id) as users  FROM company c LEFT JOIN workspace w ON c.id = w.company_id \n" + //
-        "LEFT JOIN workspace_user wu ON w.id = wu.workspace_id where c.favorite=1 and c.name LIKE ?\n" + //
-        "GROUP BY c.id order by c.updated_at DESC LIMIT ?;";
+
+        String clientSQL = "SELECT c.id, c.location, c.flag, i.name as industry, c.name AS clients, c.favorite, COUNT(w.id) AS workspaces, COUNT(wu.user_id) as users  FROM company c \n" + //
+                        "LEFT JOIN workspace w ON c.id = w.company_id LEFT JOIN workspace_user wu ON w.id = wu.workspace_id LEFT JOIN industry i on c.industry_id=i.id\n" + //
+                        "where c.favorite<>1 and c.name LIKE ? GROUP BY c.id order by c.updated_at DESC LIMIT ?;";
+        String clientFavoriteSQL="SELECT c.id, c.location, c.flag, i.name as industry, c.name AS clients, c.favorite, COUNT(w.id) AS workspaces, COUNT(wu.user_id) as users  FROM company c LEFT JOIN workspace w ON c.id = w.company_id \n" + //
+                        "LEFT JOIN workspace_user wu ON w.id = wu.workspace_id LEFT JOIN industry i on c.industry_id=i.id\n" + //
+                        "where c.favorite=1 and c.name LIKE ? GROUP BY c.id order by c.updated_at DESC LIMIT ?;";
+
         String workspaceSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description, w.favorite from workspace w \n" + //
-        "join company c on w.company_id=c.id where w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
+        "join company c on w.company_id=c.id where w.favorite<>1 and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
         String workspaceFavoriteSQL="select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w \n" + //
         "join company c on w.company_id=c.id where w.favorite=1 and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
-        String userSQL = "select wu.id, u.email as name, wu.updated_at as date from workspace_user wu join user u on wu.user_id=u.id group by u.id order by wu.updated_at DESC LIMIT ?;";
+        String userSQL = "select wu.id, u.email as name, ut.name as type, wu.updated_at as date from workspace_user wu \n" + //
+                        "join user u on wu.user_id=u.id join user_type ut on u.type_id= ut.id \n" + //
+                        "group by u.id order by wu.updated_at DESC LIMIT ?;";
+        String userSearchSQL="SELECT wu.id, u.email AS name, ut.name AS type, wu.updated_at as date FROM workspace_user wu\n" + //
+                        "JOIN user u ON wu.user_id = u.id JOIN user_type ut ON u.type_id = ut.id JOIN workspace w ON wu.workspace_id = w.id\n" + //
+                        "WHERE u.email LIKE ? OR w.name LIKE ?\n" + //
+                        "GROUP BY u.id ORDER BY wu.updated_at DESC LIMIT ?;";
+        String clientSearchSQL = "SELECT c.id, c.location, c.flag, i.name as industry, c.name AS clients, c.favorite, COUNT(w.id) AS workspaces, COUNT(wu.user_id) as users  FROM company c \n" + //
+                        "LEFT JOIN workspace w ON c.id = w.company_id LEFT JOIN workspace_user wu ON w.id = wu.workspace_id LEFT JOIN industry i on c.industry_id=i.id\n" + //
+                        "where c.name LIKE ? GROUP BY c.id order by c.updated_at DESC LIMIT ?;";
+        String workspaceSearchSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description, w.favorite from workspace w \n" + //
+                        "join company c on w.company_id=c.id where w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
        
         String workspaceUserSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w left join workspace_user wu on w.id=wu.workspace_id\n" + //
-                        "join company c on w.company_id=c.id where wu.user_id=? and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
+                        "join company c on w.company_id=c.id where wu.user_id=? and w.favorite<>1 and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
         String workspaceUserFavoriteSQL="select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w left join workspace_user wu on w.id=wu.workspace_id\n" + //
                         "join company c on w.company_id=c.id where wu.user_id=? and w.favorite=1 and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
+        String workspaceUserSearchSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w left join workspace_user wu on w.id=wu.workspace_id\n" + //
+                        "join company c on w.company_id=c.id where wu.user_id=? and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
 
         DashboardResponse dash= new DashboardResponse();
         List<DashboardResponse.clientsResp> clientList;
@@ -187,30 +199,20 @@ public class CompanyDao {
         if(userTypeId==1){
                 clientFavList = jdbcTemplate.query(clientFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermNull,limit);
                 if(clientFavList.size()<3){
-                    clientList = jdbcTemplate.query(clientSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermNull,limit);
-                    normalclient=true;
-                    clientFavList=clientList;
+                    clientList = jdbcTemplate.query(clientSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermNull,(limit-clientFavList.size()));
+                    clientFavList.addAll(clientList);
                 }
                 workspaceFavoriteList = jdbcTemplate.query(workspaceFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermNull,limit);
                 if(workspaceFavoriteList.size()<3){
-                    workspaceList = jdbcTemplate.query(workspaceSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermNull,limit);
-                    normalworkspaces=true;
-                    workspaceFavoriteList=workspaceList;
+                    workspaceList = jdbcTemplate.query(workspaceSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermNull,(limit-workspaceFavoriteList.size()));
+                    workspaceFavoriteList.addAll(workspaceList);
                 }
+                UserList = jdbcTemplate.query(userSQL, new BeanPropertyRowMapper<>(DashboardResponse.userResp.class),limit);
                 if(!Search.isEmpty()){
-                    if(normalclient== true){
-                        clientFavList = jdbcTemplate.query(clientSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermLike ,limit);
-                    }else{
-                        clientFavList = jdbcTemplate.query(clientFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermLike,limit);
-                    }
-                    if(normalworkspaces== true){
-                        workspaceFavoriteList = jdbcTemplate.query(workspaceSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermLike ,limit);  
-                    }else{
-                        workspaceFavoriteList = jdbcTemplate.query(workspaceFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermLike ,limit);
-
-                    }
+                    clientFavList = jdbcTemplate.query(clientSearchSQL, new BeanPropertyRowMapper<>(DashboardResponse.clientsResp.class),searchTermLike ,limit);
+                    workspaceFavoriteList = jdbcTemplate.query(workspaceSearchSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),searchTermLike ,limit);
+                    UserList = jdbcTemplate.query(userSearchSQL, new BeanPropertyRowMapper<>(DashboardResponse.userResp.class),searchTermLike,searchTermLike,limit);
                 }
-            UserList = jdbcTemplate.query(userSQL, new BeanPropertyRowMapper<>(DashboardResponse.userResp.class),limit);
             dash.setClients(clientFavList);
             dash.setWorksapces(workspaceFavoriteList);
             dash.setUserWorkspaces(UserList);
@@ -218,16 +220,11 @@ public class CompanyDao {
         else{
             workspaceFavoriteList = jdbcTemplate.query(workspaceUserFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermNull,limit);
                 if(workspaceFavoriteList.size()<3){
-                    workspaceList = jdbcTemplate.query(workspaceUserSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermNull,limit);
-                    normalworkspaces=true;
-                    workspaceFavoriteList=workspaceList;
+                    workspaceList = jdbcTemplate.query(workspaceUserSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermNull,(limit-workspaceFavoriteList.size()));
+                    workspaceFavoriteList.addAll(workspaceList);
                 }
                 if(!Search.isEmpty()){
-                    if(normalworkspaces== true){
-                        workspaceFavoriteList = jdbcTemplate.query(workspaceUserSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermLike ,limit);  
-                    }else{
-                        workspaceFavoriteList = jdbcTemplate.query(workspaceUserFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermLike ,limit);
-                    }  
+                    workspaceFavoriteList = jdbcTemplate.query(workspaceUserSearchSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermLike ,limit);   
                 }
                 dash.setWorksapces(workspaceFavoriteList);
         }
