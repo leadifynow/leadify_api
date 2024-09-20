@@ -176,10 +176,6 @@ public class CompanyDao {
         String workspaceSearchSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description, w.favorite from workspace w \n" + //
                         "join company c on w.company_id=c.id where w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
        
-        String workspaceUserSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w left join workspace_user wu on w.id=wu.workspace_id\n" + //
-                        "join company c on w.company_id=c.id where wu.user_id=? and w.favorite<>1 and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
-        String workspaceUserFavoriteSQL="select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w left join workspace_user wu on w.id=wu.workspace_id\n" + //
-                        "join company c on w.company_id=c.id where wu.user_id=? and w.favorite=1 and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
         String workspaceUserSearchSQL = "select w.id as workspace_id , c.name as client ,w.name ,w.description,w.favorite from workspace w left join workspace_user wu on w.id=wu.workspace_id\n" + //
                         "join company c on w.company_id=c.id where wu.user_id=? and w.name LIKE ? order by w.updated_at DESC LIMIT ?;";
 
@@ -218,11 +214,7 @@ public class CompanyDao {
             dash.setUserWorkspaces(UserList);
         }
         else{
-            workspaceFavoriteList = jdbcTemplate.query(workspaceUserFavoriteSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermNull,limit);
-                if(workspaceFavoriteList.size()<3){
-                    workspaceList = jdbcTemplate.query(workspaceUserSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermNull,(limit-workspaceFavoriteList.size()));
-                    workspaceFavoriteList.addAll(workspaceList);
-                }
+            workspaceFavoriteList = jdbcTemplate.query(workspaceUserSearchSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermNull ,limit);
                 if(!Search.isEmpty()){
                     workspaceFavoriteList = jdbcTemplate.query(workspaceUserSearchSQL, new BeanPropertyRowMapper<>(DashboardResponse.workspaceResp.class),userId,searchTermLike ,limit);   
                 }
