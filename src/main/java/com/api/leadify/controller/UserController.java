@@ -47,6 +47,11 @@ public class UserController {
         return userDao.getUserCompanies(userId);
     }
 
+    @GetMapping("/getUserWorkspaces/{userId}")
+    public ResponseEntity<List<String>> getUserWorkspaces(@PathVariable Integer userId) {
+        return userDao.getUserWorkspaces(userId);
+    }
+
     @GetMapping("/managers")
     public ResponseEntity<List<User>> getUsersByTypeId() {
         return userDao.getUsersByTypeId();

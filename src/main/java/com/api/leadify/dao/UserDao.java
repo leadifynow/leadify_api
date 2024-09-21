@@ -233,6 +233,17 @@ public class UserDao {
         }
     }
 
+    public ResponseEntity<List<String>>getUserWorkspaces(Integer userId){
+        String sql = "select w.name from workspace w join workspace_user wu on w.id=wu.workspace_id where wu.user_id=?";
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, userId);
+        List <String> workspaces=new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            String name = (String) row.get("name"); 
+            workspaces.add(name);
+        }
+        return ResponseEntity.ok(workspaces);
+    }
+
     public ResponseEntity<List<User>> getUsersByTypeId() {
         int typeId = 1;
         try {
