@@ -1,6 +1,7 @@
 package com.api.leadify.dao;
 
 import com.api.leadify.entity.Company;
+import com.api.leadify.entity.Interested;
 import com.api.leadify.entity.User;
 import com.api.leadify.entity.Paths;
 import com.api.leadify.entity.SessionM;
@@ -63,7 +64,10 @@ public class UserDao {
             );
 
             if (updatedRows > 0) {
-                User updatedUserData = getUserById(updatedUser.getId());
+
+                String fetchNewUserQuery = "SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.created_at, u.updated_at, u.type_id, ut.name as type_name\n" + //
+                "FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE u.id=?";
+                User updatedUserData = jdbcTemplate.queryForObject(fetchNewUserQuery, new BeanPropertyRowMapper<>(User.class), updatedUser.getId());
                 return ResponseEntity.ok(updatedUserData);
                 //return new ApiResponse<>("User updated successfully", updatedUserData, 200);
             } else {
@@ -84,6 +88,24 @@ public class UserDao {
             return null;
         }
     }
+    public ResponseEntity<String> getUserPassword(Integer userId){
+        SessionM sessionM = JWT.getSession(request);
+        Integer userActualId = sessionM.getIdUsuario();
+
+        String sqlgetType="select type_id from user where id=?;";
+        String sqlgetPass="select password from user where id=?;";
+        String Pass="";
+        Integer type = jdbcTemplate.queryForObject(sqlgetType, new Object[]{userActualId}, Integer.class);
+
+        if(type==1){
+             Pass = jdbcTemplate.queryForObject(sqlgetPass, new Object[]{userId}, String.class);
+        }else{
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admin can perform this action");
+        }
+
+         return ResponseEntity.ok(Pass);
+    }
+
     public ResponseEntity<User> createUser(User user) {
         String sql = "INSERT INTO user (first_name, last_name, email, password, type_id) VALUES (?, ?, ?, ?, ?)";
 
@@ -97,8 +119,17 @@ public class UserDao {
                     user.getType_id()
             );
 
+              // Get the generated user_id
+            String getUserIdQuery = "SELECT LAST_INSERT_ID()";
+            int UserId = jdbcTemplate.queryForObject(getUserIdQuery, Integer.class);
+
+            // Fetch the newly created User record
+            String fetchNewUserQuery = "SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.created_at, u.updated_at, u.type_id, ut.name as type_name\n" + //
+                                "FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE u.id=?";
+            User newUser = jdbcTemplate.queryForObject(fetchNewUserQuery, new BeanPropertyRowMapper<>(User.class), UserId);
+
             // Fetch the created user to include in the ApiResponse
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(newUser);
             //return new ApiResponse<>("User created successfully", null, 201);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

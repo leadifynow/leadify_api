@@ -37,6 +37,12 @@ public class UserController {
     public ResponseEntity<List<User>> getUsers() {
         return userDao.getUsers();
     }
+
+    @GetMapping("/getPass/{userId}")
+    public ResponseEntity<String> getUserPassword(@PathVariable Integer userId) {
+        return userDao.getUserPassword(userId);
+    }
+
     @PostMapping(value = "/login", produces = "application/json")
     @ResponseBody
     public ResponseEntity<?> login(@RequestBody User user) {
