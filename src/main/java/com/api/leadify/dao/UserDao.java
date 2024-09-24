@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.sql.Timestamp;
 
 @Repository
 public class UserDao {
@@ -100,7 +101,12 @@ public class UserDao {
         if(type==1){
              Pass = jdbcTemplate.queryForObject(sqlgetPass, new Object[]{userId}, String.class);
         }else{
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admin can perform this action");
+            if(userActualId==userId){
+                Pass = jdbcTemplate.queryForObject(sqlgetPass, new Object[]{userId}, String.class);  
+            }
+            else{
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admin can perform this action");
+            }
         }
 
          return ResponseEntity.ok(Pass);
@@ -116,7 +122,9 @@ public class UserDao {
                     user.getLast_name(),
                     user.getEmail(),
                     user.getPassword(),
-                    user.getType_id()
+                    user.getType_id(),
+                    user.getCreated_at(),
+                    user.getCreated_at()
             );
 
               // Get the generated user_id
@@ -136,14 +144,35 @@ public class UserDao {
             //return new ApiResponse<>("Error creating user", null, 500);
         }
     }
-    public ResponseEntity<List<User>> getUsers() {
-        String sql = "SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.created_at, u.updated_at, u.type_id, ut.name as type_name " +
-                "FROM user u " +
-                "JOIN user_type ut ON u.type_id = ut.id " +
-                "WHERE u.type_id = 2";
+    public ResponseEntity<List<User>> getUsers(String search, Integer SortOpc, Integer GroupOpc) {
+        StringBuilder sqlUser = new StringBuilder(
+                    "SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.created_at, u.updated_at, u.type_id, ut.name as type_name \n" + //
+                                                "FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE u.email LIKE ? ");
+
+        String SearchPararm="%"+search+"%";
+
+        if (GroupOpc != null && GroupOpc != 0){
+            if(GroupOpc==1){
+                sqlUser.append(" and u.type_id = 1");
+            }
+            if(GroupOpc==2){
+                sqlUser.append(" and u.type_id = 2");
+            }
+        }
+        if (SortOpc != null && SortOpc != 0){
+            if(SortOpc==1){
+                sqlUser.append(" order by u.updated_at desc ");
+            }
+            if(SortOpc==2){
+                sqlUser.append(" order by u.created_at desc ");
+            }
+        }
+
+        String finalSql = sqlUser.toString();
+        
 
         try {
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(finalSql,SearchPararm);
 
             List<User> userList = new ArrayList<>();
 
@@ -153,9 +182,11 @@ public class UserDao {
                 user.setFirst_name((String) row.get("first_name"));
                 user.setLast_name((String) row.get("last_name"));
                 user.setEmail((String) row.get("email"));
-                user.setPassword((String) row.get("password"));
+                //user.setPassword((String) row.get("password"));
                 user.setType_id((Integer) row.get("type_id"));
                 user.setType_name((String) row.get("type_name")); // New field for user_type name
+                user.setCreated_at((Timestamp)row.get("created_at"));
+                user.setUpdated_at((Timestamp)row.get("updated_at"));
 
                 userList.add(user);
             }

@@ -1,5 +1,7 @@
 package com.api.leadify.entity;
 
+import java.sql.Timestamp;
+
 public class User {
     private int id;
     private String first_name;
@@ -10,6 +12,8 @@ public class User {
     private String type_name;// Added field for user_type name
     private boolean theme;
     private boolean remember;
+    private Timestamp created_at;
+    private Timestamp updated_at;
 
     // Constructors, getters, and setters
 
@@ -83,6 +87,22 @@ public class User {
 
     public void setRemember(boolean remember) {
         this.remember = remember;
+    }
+
+    public Timestamp getCreated_at() {
+        return created_at;
+    }
+
+    public void setCreated_at(Timestamp created_at) {
+        this.created_at = created_at;
+    }
+
+    public Timestamp getUpdated_at() {
+        return updated_at;
+    }
+
+    public void setUpdated_at(Timestamp updated_at) {
+        this.updated_at = updated_at;
     }
 
 }

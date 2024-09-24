@@ -34,8 +34,8 @@ public class UserController {
         return userDao.createUser(user);
     }
     @GetMapping("/getUsers")
-    public ResponseEntity<List<User>> getUsers() {
-        return userDao.getUsers();
+    public ResponseEntity<List<User>> getUsers(@RequestParam (required = false, defaultValue = "") String search, @RequestParam (required = false,defaultValue = "0") Integer SortOpc,@RequestParam (required = false,defaultValue = "0") Integer GroupOpc) {
+        return userDao.getUsers(search,SortOpc,GroupOpc);
     }
 
     @GetMapping("/getPass/{userId}")
