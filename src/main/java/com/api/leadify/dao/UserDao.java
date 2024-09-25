@@ -122,9 +122,7 @@ public class UserDao {
                     user.getLast_name(),
                     user.getEmail(),
                     user.getPassword(),
-                    user.getType_id(),
-                    user.getCreated_at(),
-                    user.getCreated_at()
+                    user.getType_id()
             );
 
               // Get the generated user_id
