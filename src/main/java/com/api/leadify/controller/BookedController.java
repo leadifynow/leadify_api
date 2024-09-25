@@ -6,6 +6,9 @@ import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Booked;
 import com.api.leadify.entity.Interested;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +36,19 @@ public class BookedController {
                                                                                 @RequestParam(required = false) String startDate,
                                                                                 @RequestParam(required = false) String endDate) {
         return bookedDao.getAllBookedByCompanyId(companyId, workspace_id, page, pageSize, filterType, startDate, endDate);
+    }
+    @GetMapping("/get")
+    public ResponseEntity<Page<Booked>> getAllBookedByCompanyId(
+            @RequestParam(required = false) Integer companyId,
+            @RequestParam String workspaceId,
+            @RequestParam(defaultValue = "All") String match, // Match filter
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "workspace") String filterBy, // Filter by workspace or company
+            @RequestParam(defaultValue = "Newest") String sortBy, // Sort by Newest, Oldest, or Last Updated
+            @PageableDefault(page = 0, size = 10) Pageable pageable) {
+
+        return bookedDao.getBooked(companyId, workspaceId, pageable, match, startDate, endDate, filterBy, sortBy);
     }
     @GetMapping("/search")
     public ResponseEntity<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId, @RequestParam String workspace) {

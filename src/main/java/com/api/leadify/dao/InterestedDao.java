@@ -10,13 +10,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -315,6 +322,149 @@ public class InterestedDao {
             //return new ApiResponse<>("Error retrieving interested items", null, 500);
         }
     }
+    public ResponseEntity<Page<Interested>> getInterested(
+            UUID workspaceId, int page, int pageSize, Boolean booked, Integer stageId, String sortBy) {
+        try {
+            // Adjust page number because Spring Data pages are zero-based
+            int adjustedPage = Math.max(page - 1, 0);
+            pageSize = Math.max(pageSize, 1);
+            int offset = adjustedPage * pageSize;
+
+            // Set default value for 'booked' if it is null
+            if (booked == null) {
+                booked = false;
+            }
+
+            // Build the SQL query with named parameters
+            StringBuilder sqlBuilder = new StringBuilder();
+            sqlBuilder.append("SELECT i.* ")
+                    .append("FROM interested i ")
+                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
+                    .append("WHERE i.workspace = :workspace ")
+                    .append("AND i.manager IS NULL ")
+                    .append("AND i.booked = :booked ")
+                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+
+            // Set query parameters
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("workspace", workspaceId.toString());
+            params.addValue("booked", booked ? 1 : 0);
+
+            // Add stageId condition if the stageId parameter is not null
+            if (stageId != null) {
+                sqlBuilder.append("AND i.stage_id = :stageId ");
+                params.addValue("stageId", stageId);
+            } else {
+                // Add excludedStageNames condition only when stageId is null
+                List<String> excludedStageNames =
+                        Arrays.asList("Not a Fit", "Completed", "Phone Call", "Other");
+                sqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
+                params.addValue("excludedStageNames", excludedStageNames);
+            }
+
+            // Determine the ORDER BY clause based on sortBy
+            String orderByClause;
+            if (sortBy == null) {
+                // Default sorting
+                orderByClause = "ORDER BY "
+                        + "CASE "
+                        + "WHEN i.stage_id IS NULL THEN 0 "
+                        + "WHEN i.next_update < CURDATE() THEN 1 "
+                        + "WHEN i.next_update = CURDATE() THEN 2 "
+                        + "END, "
+                        + "i.created_at DESC ";
+            } else {
+                switch (sortBy) {
+                    case "Newest Leads":
+                        orderByClause = "ORDER BY i.created_at DESC ";
+                        break;
+                    case "Oldest Leads":
+                        orderByClause = "ORDER BY i.created_at ASC ";
+                        break;
+                    case "Last modified":
+                        orderByClause = "ORDER BY i.updated_at DESC ";
+                        break;
+                    case "Next update":
+                        // Custom ordering for 'Next update'
+                        orderByClause = "ORDER BY "
+                                + "CASE "
+                                + "WHEN i.next_update < CURDATE() THEN 0 " // Overdue updates
+                                + "WHEN i.next_update = CURDATE() THEN 1 " // Updates due today
+                                + "WHEN i.next_update > CURDATE() THEN 2 " // Future updates
+                                + "ELSE 3 " // Null or undefined
+                                + "END, "
+                                + "i.next_update ASC ";
+                        break;
+                    case "Next Day":
+                        // Filter to get leads that need an update the next day
+                        sqlBuilder.append("AND i.next_update = CURDATE() + INTERVAL 1 DAY ");
+                        orderByClause = "ORDER BY i.next_update ASC ";
+                        break;
+                    default:
+                        // Invalid sortBy value, default to 'Newest Leads'
+                        orderByClause = "ORDER BY i.created_at DESC ";
+                        break;
+                }
+            }
+
+            // Append ORDER BY, LIMIT, OFFSET
+            sqlBuilder.append(orderByClause);
+            sqlBuilder.append("LIMIT :limit OFFSET :offset");
+
+            params.addValue("limit", pageSize);
+            params.addValue("offset", offset);
+
+            String sql = sqlBuilder.toString();
+
+            // Use NamedParameterJdbcTemplate for named parameters and IN clause handling
+            NamedParameterJdbcTemplate namedJdbcTemplate =
+                    new NamedParameterJdbcTemplate(jdbcTemplate);
+
+            // Execute the query to get the data
+            List<Interested> interestedList =
+                    namedJdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(Interested.class));
+
+            // Fetch total count for pagination
+            StringBuilder countSqlBuilder = new StringBuilder();
+            countSqlBuilder.append("SELECT COUNT(*) ")
+                    .append("FROM interested i ")
+                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
+                    .append("WHERE i.workspace = :workspace ")
+                    .append("AND i.manager IS NULL ")
+                    .append("AND i.booked = :booked ")
+                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+
+            // Add stageId condition to the count query if stageId parameter is not null
+            if (stageId != null) {
+                countSqlBuilder.append("AND i.stage_id = :stageId ");
+                // stageId parameter is already added to params
+            } else {
+                // Add excludedStageNames condition only when stageId is null
+                countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
+                // excludedStageNames parameter is already added to params
+            }
+
+            String countSql = countSqlBuilder.toString();
+
+            int totalItems = namedJdbcTemplate.queryForObject(countSql, params, Integer.class);
+
+            // Create Pageable instance
+            Pageable pageable = PageRequest.of(adjustedPage, pageSize);
+
+            // Create Page instance
+            Page<Interested> interestedPage =
+                    new PageImpl<>(interestedList, pageable, totalItems);
+
+            // Return the result
+            return ResponseEntity.ok(interestedPage);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Log or handle the exception
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
 
     private boolean isStageName(int stageId, UUID workspaceId, String stageName) {
         int stageIdFromDB = getStageIdForName(stageName, workspaceId);
@@ -327,7 +477,6 @@ public class InterestedDao {
         LocalDate nextUpdateLocalDate = nextUpdateDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         return nextUpdateLocalDate.isBefore(LocalDate.now());
     }
-
     private boolean isNextUpdateToday(Date nextUpdateDate) {
         if (nextUpdateDate == null) {
             return true; // Treat null as today
@@ -553,7 +702,6 @@ public class InterestedDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
-
     public ResponseEntity<Void> deleteById(Integer id) {
         try {
             String sql = "DELETE FROM interested WHERE id = ?";

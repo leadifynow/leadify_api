@@ -6,6 +6,7 @@ import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Interested;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,18 @@ public class InterestedController {
     @GetMapping("/getAllByWorkspaceId/{workspaceId}/{page}/{pageSize}")
     public ResponseEntity<PaginatedResponse<List<Interested>>> getAllByWorkspaceId(@PathVariable UUID workspaceId, @PathVariable int page, @PathVariable int pageSize) {
         return interestedDao.getAllByWorkspaceId(workspaceId, page, pageSize);
+    }
+    // Este es el nuevo metodo para los interesados
+    @GetMapping("/getByWorkspace")
+    public ResponseEntity<Page<Interested>> getAllInterestedByWorkspaceId(
+            @RequestParam UUID workspaceId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) Boolean booked,
+            @RequestParam(required = false) Integer stageId,
+            @RequestParam(required = false) String sortBy) {
+
+        return interestedDao.getInterested(workspaceId, page, pageSize, booked, stageId, sortBy);
     }
     @PutMapping("/updateStage/{interestedId}/{stageId}")
     public ResponseEntity<String> updateStage2(@PathVariable Integer interestedId, @PathVariable Integer stageId) {

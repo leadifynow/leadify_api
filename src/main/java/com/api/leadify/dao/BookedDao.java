@@ -9,10 +9,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
@@ -20,8 +26,11 @@ import org.springframework.stereotype.Repository;
 import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.Date;
 @Slf4j
@@ -323,6 +332,109 @@ public class BookedDao {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
             //return new ApiResponse<>(errorMessage, null, 500);
+        }
+    }
+    public ResponseEntity<Page<Booked>> getBooked(
+            Integer companyId, String workspaceId, Pageable pageable, String match, String startDate, String endDate, String filterBy, String sortBy) {
+        try {
+            int page = pageable.getPageNumber();
+            int pageSize = pageable.getPageSize();
+            int offset = page * pageSize;
+
+            // Initialize base SQL and parameters
+            StringBuilder baseSql = new StringBuilder();
+            MapSqlParameterSource params = new MapSqlParameterSource();
+
+            // Handle filterBy logic
+            if ("company".equalsIgnoreCase(filterBy)) {
+                // Retrieve company_id from workspace table if filterBy is company
+                String companySql = "SELECT company_id FROM workspace WHERE id = :workspaceId";
+                NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+                Integer retrievedCompanyId = namedJdbcTemplate.queryForObject(companySql,
+                        new MapSqlParameterSource("workspaceId", workspaceId), Integer.class);
+
+                if (retrievedCompanyId == null) {
+                    throw new IllegalArgumentException("No company found for the given workspaceId.");
+                }
+
+                // Apply the company filter
+                baseSql.append(" FROM booked WHERE company_id = :companyId AND deleted = 0");
+                params.addValue("companyId", retrievedCompanyId);
+
+            } else if ("workspace".equalsIgnoreCase(filterBy)) {
+                // Apply the workspace filter directly
+                baseSql.append(" FROM booked WHERE workspace_id = :workspaceId AND deleted = 0");
+                params.addValue("workspaceId", workspaceId);
+            } else {
+                throw new IllegalArgumentException("Invalid filterBy value. It must be either 'company' or 'workspace'.");
+            }
+
+            // Add filter conditions based on match parameter
+            if ("Yes".equalsIgnoreCase(match)) {
+                baseSql.append(" AND interested_id IS NOT NULL");
+            } else if ("No".equalsIgnoreCase(match)) {
+                baseSql.append(" AND interested_id IS NULL");
+            } else if (!"All".equalsIgnoreCase(match)) {
+                throw new IllegalArgumentException("Invalid match value. It must be 'All', 'Yes', or 'No'.");
+            }
+
+            // Add filter conditions for startDate and endDate if they are provided
+            if (startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty()) {
+                try {
+                    LocalDate startLocalDate = LocalDate.parse(startDate);
+                    LocalDate endLocalDate = LocalDate.parse(endDate);
+                    LocalDateTime startDateTime = startLocalDate.atStartOfDay();
+                    LocalDateTime endDateTime = endLocalDate.atTime(LocalTime.MAX); // 23:59:59.999999999
+
+                    baseSql.append(" AND created_at BETWEEN :startDate AND :endDate");
+                    params.addValue("startDate", Timestamp.valueOf(startDateTime));
+                    params.addValue("endDate", Timestamp.valueOf(endDateTime));
+                } catch (DateTimeParseException e) {
+                    throw new IllegalArgumentException("Invalid date format for startDate or endDate. Expected format is yyyy-MM-dd.");
+                }
+            }
+
+            // Determine the ORDER BY clause based on sortBy parameter
+            String orderByClause;
+            if ("Newest".equalsIgnoreCase(sortBy)) {
+                orderByClause = " ORDER BY created_at DESC";
+            } else if ("Oldest".equalsIgnoreCase(sortBy)) {
+                orderByClause = " ORDER BY created_at ASC";
+            } else if ("Last Updated".equalsIgnoreCase(sortBy)) {
+                orderByClause = " ORDER BY updated_at DESC";
+            } else {
+                // Default to "Newest" if no valid sortBy is provided
+                orderByClause = " ORDER BY created_at DESC";
+            }
+
+            // Query to count total bookings
+            String countSql = "SELECT COUNT(*)" + baseSql.toString();
+            NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+            int totalItems = namedJdbcTemplate.queryForObject(countSql, params, Integer.class);
+
+            // Construct SQL query for retrieving paginated bookings
+            String dataSql = "SELECT *" + baseSql.toString() + orderByClause + " LIMIT :limit OFFSET :offset";
+            params.addValue("limit", pageSize);
+            params.addValue("offset", offset);
+
+            // Retrieve paginated bookings based on the constructed SQL query
+            List<Booked> bookedList = namedJdbcTemplate.query(dataSql, params, new BeanPropertyRowMapper<>(Booked.class));
+
+            // Create Page instance
+            Page<Booked> bookedPage = new PageImpl<>(bookedList, pageable, totalItems);
+
+            if (bookedList.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            } else {
+                return ResponseEntity.ok(bookedPage);
+            }
+        } catch (IllegalArgumentException e) {
+            // Return 400 Bad Request for invalid input
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Return 500 Internal Server Error for other exceptions
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
     public ResponseEntity<List<Booked>> searchBookedRecords(String searchTerm, int companyId, String workspace) {
