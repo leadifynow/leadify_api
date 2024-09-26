@@ -30,6 +30,12 @@ public class WorkspaceUserController {
     public ResponseEntity<String> deleteWorkspaceUserByUserId(@PathVariable int userId) {
         return workspaceUserDao.deleteByUserId(userId);
     }
+
+    @DeleteMapping("/deleteWorkspaceUser")
+    public ResponseEntity<String> deleteWorkspaceUserbyUserAndWorkspace(@RequestParam int userId, @RequestParam UUID workspaceId) {
+        return workspaceUserDao.deleteByUserAndWorkspace(userId,workspaceId);
+    }
+
     @PostMapping("/addUserToWorkspace")
     public ResponseEntity<String> addUserToWorkspace(@RequestParam int userId, @RequestParam UUID workspaceId) {
         System.out.println(userId);

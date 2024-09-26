@@ -54,8 +54,9 @@ public class WorkspaceDao {
 
             // Check if ClientName is provided and add it to the SQL query
             if (ClientName != null && !ClientName.isEmpty()) {
-                sql.append("WHERE c.name = ? ");
-                parameters.add(ClientName);
+                String search= "%"+ClientName +"%";
+                sql.append("WHERE c.name like ? ");
+                parameters.add(search);
             }
 
             // Check GroupOpc and apply groupings

@@ -54,6 +54,21 @@ public class WorkspaceUserDao {
             return new ResponseEntity<>("Error deleting workspace user", null, 500);
         }
     }
+
+    public ResponseEntity<String> deleteByUserAndWorkspace(int userId, UUID workspaceId) {
+        try {
+            String sql = "delete from workspace_user where user_id=? and workspace_id=?;";
+            int affectedRows = jdbcTemplate.update(sql, userId, workspaceId.toString());
+
+            if (affectedRows > 0) {
+                return new ResponseEntity<>("Workspace user deleted successfully", null, 200);
+            } else {
+                return new ResponseEntity<>("No workspace user found for the given user ID", null, 404);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error deleting workspace user", null, 500);
+        }
+    }
     public ResponseEntity<String> addUserToWorkspace(int userId, UUID workspaceId) {
         try {
             String sql = "INSERT INTO workspace_user (user_id, workspace_id) VALUES (?, ?)";
