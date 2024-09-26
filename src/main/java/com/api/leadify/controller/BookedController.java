@@ -51,8 +51,8 @@ public class BookedController {
         return bookedDao.getBooked(companyId, workspaceId, pageable, match, startDate, endDate, filterBy, sortBy);
     }
     @GetMapping("/search")
-    public ResponseEntity<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam int companyId, @RequestParam String workspace) {
-        return bookedDao.searchBookedRecords(searchTerm, companyId, workspace);
+    public ResponseEntity<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam String workspace) {
+        return bookedDao.searchInterestedToMatch(searchTerm, workspace);
     }
     @PutMapping("/update/{interestedId}/{bookedId}")
     public ResponseEntity<Booked> updateBookedAndInterested(@PathVariable int interestedId, @PathVariable int bookedId) {

@@ -456,6 +456,66 @@ public class BookedDao {
             //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
+    public ResponseEntity<List<Booked>> searchInterestedToMatch(String searchTerm, String workspace) {
+        try {
+            // First, retrieve the company_id based on the workspace
+            String companySql = "SELECT company_id FROM workspace WHERE id = ?";
+            Integer companyId = jdbcTemplate.queryForObject(companySql, new Object[]{workspace}, Integer.class);
+
+            if (companyId == null) {
+                throw new IllegalArgumentException("No company found for the given workspace.");
+            }
+
+            // Prepare the main SQL query
+            String sql = "SELECT i.id, i.event_type AS event_name, i.workspace AS workspace_id, i.campaign_id AS campaign_id, " +
+                    "i.campaign_name AS campaign_name, i.lead_email AS email, i.title, i.email AS second_email, i.website, " +
+                    "i.industry, i.lastName AS last_name, i.firstName AS first_name, i.number_of_employees AS business, " +
+                    "i.companyName AS name, i.linkedin_url, i.stage_id, i.notes, i.created_at, 0 as booked " +
+                    "FROM interested i " +
+                    "JOIN workspace w ON i.workspace = w.id " +
+                    "JOIN company c ON w.company_id = c.id " +
+                    "WHERE (i.id = ? OR i.lead_email LIKE ? OR i.firstName LIKE ? " +
+                    "OR (CASE WHEN ? LIKE '% %' THEN i.lastName LIKE ? ELSE i.lastName LIKE ? END) " +
+                    "OR i.notes LIKE ?) AND c.id = ? AND i.workspace = ?";
+
+            // Prepare the parameters
+            String searchTermLike = "%" + searchTerm + "%";
+            String[] searchTerms = searchTerm.split(" ");
+            String secondWordLike = searchTerms.length == 2 ? "%" + searchTerms[1] + "%" : searchTermLike;
+
+            // Now pass all the necessary parameters
+            List<Booked> bookedList = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Booked.class),
+                    // Placeholder 1
+                    searchTerm,
+                    // Placeholder 2
+                    searchTermLike,
+                    // Placeholder 3
+                    searchTermLike,
+                    // Placeholder 4
+                    searchTerm,
+                    // Placeholder 5
+                    secondWordLike,
+                    // Placeholder 6
+                    searchTermLike,
+                    // Placeholder 7 (missing parameter added)
+                    searchTermLike,
+                    // Placeholder 8
+                    companyId,
+                    // Placeholder 9
+                    workspace
+            );
+
+            return ResponseEntity.ok(bookedList);
+
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+
     public ResponseEntity<Booked> updateBookedAndInterested(int interestedId, int bookedId) {
         try {
             // Update interested_id in the booked table
