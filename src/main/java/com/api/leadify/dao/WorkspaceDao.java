@@ -43,7 +43,7 @@ public class WorkspaceDao {
         jdbcTemplate.update(sql, workspace.getId().toString(), workspace.getName());
     }
 
-    public ResponseEntity<WorkspaceResponse> getAllOld(String ClientName, Integer GroupOpc, Integer orderBy) {
+    public ResponseEntity<WorkspaceResponse> getAllOld(String ClientName, Integer orderBy) {
         try {
             StringBuilder sql = new StringBuilder(
                     "SELECT DISTINCT w.*, c.name AS client FROM workspace w " +
@@ -60,36 +60,7 @@ public class WorkspaceDao {
             }
 
             // Check GroupOpc and apply groupings
-            if (GroupOpc != null && GroupOpc != 0) {
-                if (GroupOpc == 1) {
-                    sql.append("GROUP BY c.name ");
-                    sql.append("ORDER BY c.name ASC ");
-                } else if (GroupOpc == 2) {
-                    sql.append("GROUP BY w.name ");
-                    sql.append("ORDER BY w.name ASC ");
-                } else if (GroupOpc == 3) {
-                    sql.append("GROUP BY w.id ");
-                    sql.append("ORDER BY w.id ASC ");
-                }
-
-                // Apply ordering based on the `orderBy` value
-                if (orderBy != null && orderBy != 0) {
-                    switch (orderBy) {
-                        case 1:
-                            sql.append(", w.updated_at ASC ");
-                            break;
-                        case 2:
-                            sql.append(", w.updated_at DESC ");
-                            break;
-                        case 3:
-                            sql.append(", w.created_at ASC ");
-                            break;
-                        case 4:
-                            sql.append(", w.created_at DESC ");
-                            break;
-                    }
-                }
-            } else if (GroupOpc == 0 && orderBy != null && orderBy != 0) {
+            if (orderBy != null && orderBy != 0) {
                 // Handle ordering without GroupOpc
                 switch (orderBy) {
                     case 1:
@@ -109,7 +80,7 @@ public class WorkspaceDao {
 
             // Default query for retrieving all companies and workspaces if no filters are applied
             String finalSql;
-            if ((ClientName == null || ClientName.isEmpty()) && (GroupOpc == null || GroupOpc == 0) && (orderBy == null || orderBy == 0)) {
+            if ((ClientName == null || ClientName.isEmpty()) && (orderBy == null || orderBy == 0)) {
                 finalSql = "SELECT w.*, u.email AS users, c.name AS client " +
                         "FROM workspace w " +
                         "JOIN workspace_user wu ON w.id = wu.workspace_id " +
