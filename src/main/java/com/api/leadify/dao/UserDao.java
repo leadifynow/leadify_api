@@ -144,8 +144,8 @@ public class UserDao {
     }
     public ResponseEntity<List<User>> getUsers(String search, Integer SortOpc, Integer GroupOpc) {
         StringBuilder sqlUser = new StringBuilder(
-                    "SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.created_at, u.updated_at, u.type_id, ut.name as type_name \n" + //
-                                                "FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE u.email LIKE ? ");
+                    "SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.created_at, u.updated_at, u.type_id, ut.name as type_name\n" + //
+                                                "FROM user u JOIN user_type ut ON u.type_id = ut.id WHERE  (u.email LIKE ? OR u.last_name LIKE ? OR u.first_name LIKE ?) ");
 
         String SearchPararm="%"+search+"%";
 
@@ -170,7 +170,7 @@ public class UserDao {
         
 
         try {
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(finalSql,SearchPararm);
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(finalSql,SearchPararm,SearchPararm,SearchPararm);
 
             List<User> userList = new ArrayList<>();
 
