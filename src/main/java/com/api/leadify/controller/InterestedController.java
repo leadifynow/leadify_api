@@ -55,6 +55,15 @@ public class InterestedController {
 
         return interestedDao.getInterested(workspaceId, page, pageSize, booked, stageId, sortBy);
     }
+    @GetMapping("/getAllInterested")
+    public ResponseEntity<Page<Interested>> getAllInterestedWithOutFiltersByWorkspaceId(
+            @RequestParam UUID workspaceId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue= "") String search) {
+        return interestedDao.getInterestedWithOutFilter(workspaceId, page, pageSize,search);
+    }
+
     @PutMapping("/updateStage/{interestedId}/{stageId}")
     public ResponseEntity<String> updateStage2(@PathVariable Integer interestedId, @PathVariable Integer stageId) {
         return interestedDao.updateStage2(interestedId, stageId);
