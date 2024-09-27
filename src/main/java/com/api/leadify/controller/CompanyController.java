@@ -44,6 +44,11 @@ public class CompanyController {
         return companyDao.deleteCompany(companyId);
     }
     
+    @GetMapping("/getInfoCompany")
+    public ResponseEntity<?> getInfoCompanies(@RequestParam String company) {
+       return companyDao.getInfoCompanies(company);
+    }
+
     @PutMapping("/favoriteCompany/{companyId}/{status}")
     public ResponseEntity<String> updateFavCompany(@PathVariable Integer companyId,@PathVariable boolean status) {
         return companyDao.updateFavCompany(companyId,status);
@@ -53,4 +58,6 @@ public class CompanyController {
     public ResponseEntity<?> getDashboard(@RequestParam(required = false, defaultValue = "") String Search) {
         return companyDao.getDashboardData(Search);
     }
+
+
 }

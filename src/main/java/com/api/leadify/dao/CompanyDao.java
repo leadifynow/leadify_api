@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.EmptyStackException;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public class CompanyDao {
@@ -125,6 +126,22 @@ public class CompanyDao {
             }
         } catch (Exception e) {
             return new ResponseEntity<>("Error deleting company", null, 500);
+        }
+    }
+    public  ResponseEntity<Map<String, Object>> getInfoCompanies(String company) {
+        try {
+            String sql = "select c.name,  COUNT(DISTINCT w.id) AS total_works, COUNT(DISTINCT wu.user_id) AS total_users from company c \n" + //
+                                "LEFT JOIN workspace w on c.id=w.company_id \n" + //
+                                "LEFT JOIN workspace_user wu on wu.workspace_id=w.id  where c.name=? GROUP BY c.id;";
+            Map<String, Object> rows = jdbcTemplate.queryForMap(sql,company);
+
+            if (!rows.isEmpty()) {
+                return ResponseEntity.ok(rows);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
