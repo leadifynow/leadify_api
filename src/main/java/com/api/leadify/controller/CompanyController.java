@@ -27,8 +27,13 @@ public class CompanyController {
 
     @GetMapping("/getCompanies")
     @ResponseBody
-    public ResponseEntity<CompanyResponse> getCompanies() {
-       return companyDao.getCompanies();
+    public ResponseEntity<CompanyResponse> getCompanies(
+        @RequestParam (required = false,defaultValue = "") String industryName,
+        @RequestParam (required = false,defaultValue = "") String location,
+        @RequestParam (required = false,defaultValue = "") String companyName, 
+        @RequestParam (required = false,defaultValue = "0") Integer SortOpc
+    ) {
+       return companyDao.getCompanies(industryName,location,companyName,SortOpc);
     }
     @PostMapping("/createCompany")
     public ResponseEntity<Company> createCompany(@RequestBody Company company) {

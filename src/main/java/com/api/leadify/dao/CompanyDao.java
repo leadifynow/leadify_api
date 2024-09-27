@@ -34,12 +34,50 @@ public class CompanyDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ResponseEntity<CompanyResponse> getCompanies() {
-        String sql = "select c.* ,i.name as industry from company c JOIN industry i where c.industry_id = i.id";
-        String favsql="select c.* ,i.name as industry from company c JOIN industry i where c.industry_id = i.id and favorite=true";
+    public ResponseEntity<CompanyResponse> getCompanies(String industryName,String location,String companyName, Integer SortOpc) {
+        StringBuilder sqlCompany=new StringBuilder("select c.*, i.name as industry from company c join industry i on c.industry_id = i.id \n" + //
+                        "where (i.name = ? or ? is null or ? = '') \n" + //
+                        "and (c.location = ? or ? is null or ? = '') \n" + //
+                        "and (c.name like ? OR ? IS NULL OR ? = '')  ");
+
+        StringBuilder sqlFavCompany=new StringBuilder("select c.*, i.name as industry from company c join industry i on c.industry_id = i.id \n" + //
+                        "where (i.name = ? or ? is null or ? = '') \n" + //
+                        "and (c.location = ? or ? is null or ? = '') \n" + //
+                        "and (c.name like ? OR ? IS NULL OR ? = '') \n" + //
+                        "and c.favorite=true  ");
+        if(SortOpc!=null && SortOpc!=0){
+            switch (SortOpc) {
+                case 1:
+                sqlCompany.append(" order by c.created_at asc; ");
+                sqlFavCompany.append(" order by c.created_at asc; ");
+                    break;
+                case 2:
+                sqlCompany.append(" order by c.updated_at asc ");
+                sqlFavCompany.append(" order by c.updated_at asc ");
+                
+                    break;
+                case 3:
+                sqlCompany.append(" order by c.created_at desc; ");
+                sqlFavCompany.append(" order by c.created_at desc; ");
+                    break;
+                case 4:
+                sqlCompany.append(" order by c.updated_at desc ");
+                sqlFavCompany.append(" order by c.updated_at desc ");
+                    break;
+                default:
+                    break;
+            }
+        }
+        String sql = sqlCompany.toString();
+        String favsql= sqlFavCompany.toString();
+        Object[] params = new Object[] { 
+            industryName, industryName, industryName,  
+            location, location, location,              
+            "%" + companyName + "%", companyName, companyName  
+        };
         CompanyResponse company=new CompanyResponse();
         try {
-            List<CompanyResponse.resp> companyList = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            List<CompanyResponse.resp> companyList = jdbcTemplate.query(sql, params,(rs, rowNum) -> {
                 CompanyResponse.resp datas= new CompanyResponse.resp();
                 datas.setId(rs.getInt("id"));
                 datas.setName(rs.getString("name"));
@@ -49,7 +87,7 @@ public class CompanyDao {
                 return datas;
                 });
     
-             List<CompanyResponse.resp> companyfav = jdbcTemplate.query(favsql, (rs, rowNum) -> {
+             List<CompanyResponse.resp> companyfav = jdbcTemplate.query(favsql, params,(rs, rowNum) -> {
                 CompanyResponse.resp datas= new CompanyResponse.resp();
                 datas.setId(rs.getInt("id"));
                 datas.setName(rs.getString("name"));
