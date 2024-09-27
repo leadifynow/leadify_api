@@ -50,6 +50,15 @@ public class BookedController {
 
         return bookedDao.getBooked(companyId, workspaceId, pageable, match, startDate, endDate, filterBy, sortBy);
     }
+    @GetMapping("/searchAllBooked")
+    public ResponseEntity<Page<Booked>> searchAllBookedByWorkspaceId(
+            @RequestParam String workspaceId,
+            @RequestParam(defaultValue = "", required = false) String search, // Search by Id or email
+            @PageableDefault(page = 0, size = 10) Pageable pageable) {
+
+        return bookedDao.SearchAllBooked(workspaceId, pageable, search);
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<Booked>> searchBookedRecords(@RequestParam String searchTerm, @RequestParam String workspace) {
         return bookedDao.searchInterestedToMatch(searchTerm, workspace);

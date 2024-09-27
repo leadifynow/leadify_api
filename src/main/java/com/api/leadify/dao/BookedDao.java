@@ -437,6 +437,75 @@ public class BookedDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+    
+    
+    public ResponseEntity<Page<Booked>> SearchAllBooked(
+         String workspaceId, Pageable pageable, String Search) {
+    try {
+        int page = pageable.getPageNumber();
+        int pageSize = pageable.getPageSize();
+        int offset = page * pageSize;
+
+        // Initialize base SQL and parameters
+        StringBuilder baseSql = new StringBuilder();
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        //Search companyId form workspace Id
+        String companySql = "SELECT company_id FROM workspace WHERE id = :workspaceId";
+        NamedParameterJdbcTemplate JdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+        Integer retrievedCompanyId = JdbcTemplate.queryForObject(companySql,
+                new MapSqlParameterSource("workspaceId", workspaceId), Integer.class);
+
+        if (retrievedCompanyId == null) {
+            throw new IllegalArgumentException("No company found for the given workspaceId.");
+        }
+
+        // Apply the company filter
+        baseSql.append(" FROM booked WHERE company_id = :companyId AND deleted = 0");
+        params.addValue("companyId", retrievedCompanyId);
+
+        if(Search!=null && !Search.trim().isEmpty()){
+            try {
+                Long searchId=Long.parseLong(Search);
+                baseSql.append(" AND CAST(id as char) LIKE :searchId ");
+                params.addValue("searchId", Search+ "%");
+            } catch (Exception e) {
+                baseSql.append(" AND email LIKE :searchEmail ");
+                params.addValue("searchEmail", "%"+ Search + "%");
+            }
+        }
+
+        // Query to count total bookings
+        String countSql = "SELECT COUNT(*)" + baseSql.toString();
+        NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+        int totalItems = namedJdbcTemplate.queryForObject(countSql, params, Integer.class);
+
+        // Construct SQL query for retrieving paginated bookings
+        String dataSql = "SELECT *" + baseSql.toString() +  " LIMIT :limit OFFSET :offset";
+        params.addValue("limit", pageSize);
+        params.addValue("offset", offset);
+
+        // Retrieve paginated bookings based on the constructed SQL query
+        List<Booked> bookedList = namedJdbcTemplate.query(dataSql, params, new BeanPropertyRowMapper<>(Booked.class));
+
+        // Create Page instance
+        Page<Booked> bookedPage = new PageImpl<>(bookedList, pageable, totalItems);
+
+        if (bookedList.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } else {
+            return ResponseEntity.ok(bookedPage);
+        }
+    } catch (IllegalArgumentException e) {
+        // Return 400 Bad Request for invalid input
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+    } catch (Exception e) {
+        e.printStackTrace();
+        // Return 500 Internal Server Error for other exceptions
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    }
+}
+    
     public ResponseEntity<List<Booked>> searchBookedRecords(String searchTerm, int companyId, String workspace) {
         try {
             String sql = "SELECT i.id, i.event_type AS event_name, i.workspace AS workspace_id, i.campaign_id AS campaign_id, i.campaign_name AS campaign_name, i.lead_email AS email, i.title, i.email AS second_email, " +
