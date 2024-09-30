@@ -258,12 +258,12 @@ public class WorkspaceDao {
 
             if (userTypeId != null && userTypeId == 1) {
                 // Admin user, retrieve all workspaces
-                sql = "SELECT DISTINCT w.*, c.name AS client " +
+                sql = "SELECT DISTINCT w.*, c.id as client_id, c.name AS client " +
                         "FROM workspace w " +
                         "LEFT JOIN company c ON w.company_id = c.id";
             } else {
                 // Regular user, retrieve only workspaces the user has access to
-                sql = "SELECT DISTINCT w.*, c.name AS client " +
+                sql = "SELECT DISTINCT w.*,c.id as client_id, c.name AS client " +
                         "FROM workspace w " +
                         "JOIN workspace_user wu ON w.id = wu.workspace_id " +
                         "JOIN company c ON w.company_id = c.id " +
@@ -278,6 +278,7 @@ public class WorkspaceDao {
                         workspace.setId(rs.getString("id"));
                         workspace.setName(rs.getString("name"));
                         workspace.setClient(rs.getString("client"));
+                        workspace.setClient_Id(rs.getInt("client_id"));
                         workspace.setDescription(rs.getString("description"));
                         workspace.setFav(rs.getBoolean("favorite"));
                         return workspace;

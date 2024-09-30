@@ -713,7 +713,7 @@ public class BookedDao {
             //return new ApiResponse<>("Error retrieving bookings by company ID and workspace ID", null, 500);
         }
     }
-    public ResponseEntity<Void> createManual(Booked booked) {
+    public ResponseEntity<Booked> createManual(Booked booked) {
         try {
             // Parse the meeting date
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
@@ -746,6 +746,7 @@ public class BookedDao {
                 jdbcTemplate.update(queryToUpdateInterested, interestedId);
                 updateHappen = true;
             } else {
+               
                 // Handle the case where more than one result is obtained
                 // You can log an error, throw a custom exception, or handle it in any appropriate way
             }
@@ -766,7 +767,12 @@ public class BookedDao {
             );
 
             if (insertedRows > 0) {
-                return ResponseEntity.ok().build();
+                String getBookedIdQuery = "SELECT LAST_INSERT_ID()";
+                int bookedId = jdbcTemplate.queryForObject(getBookedIdQuery, Integer.class);
+                String fetchNewBookedQuery = "select * from booked where id=?";
+                Booked newInterested = jdbcTemplate.queryForObject(fetchNewBookedQuery, new BeanPropertyRowMapper<>(Booked.class), bookedId);
+
+                return ResponseEntity.ok(newInterested);
                 //return new ApiResponse<>(updateHappen ? "Booking created and matched successfully" : "Booking created successfully", null, 200);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);

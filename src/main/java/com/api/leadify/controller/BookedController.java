@@ -91,7 +91,7 @@ public class BookedController {
         }
     }
     @PostMapping("/manual_creation")
-    public ResponseEntity<Void> createManualBooking (@RequestBody Booked booked) {
+    public ResponseEntity<?> createManualBooking (@RequestBody Booked booked) {
         return bookedDao.createManual(booked);
     }
     @PostMapping("delete/{bookedId}")

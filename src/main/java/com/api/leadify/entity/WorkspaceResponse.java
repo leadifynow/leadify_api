@@ -21,6 +21,7 @@ public class WorkspaceResponse {
         private String name;
         private String description;
         private String client;
+        private Integer client_Id;
         private List<user> users;
         private boolean fav;
     };
