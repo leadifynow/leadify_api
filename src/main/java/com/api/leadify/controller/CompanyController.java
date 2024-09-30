@@ -31,9 +31,10 @@ public class CompanyController {
         @RequestParam (required = false,defaultValue = "") String industryName,
         @RequestParam (required = false,defaultValue = "") String location,
         @RequestParam (required = false,defaultValue = "") String companyName, 
+        @RequestParam (required = false,defaultValue = "0") Integer GroupOpc,
         @RequestParam (required = false,defaultValue = "0") Integer SortOpc
     ) {
-       return companyDao.getCompanies(industryName,location,companyName,SortOpc);
+       return companyDao.getCompanies(industryName,location,companyName,GroupOpc,SortOpc);
     }
     @PostMapping("/createCompany")
     public ResponseEntity<Company> createCompany(@RequestBody Company company) {

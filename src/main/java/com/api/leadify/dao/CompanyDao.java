@@ -34,7 +34,7 @@ public class CompanyDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ResponseEntity<CompanyResponse> getCompanies(String industryName,String location,String companyName, Integer SortOpc) {
+    public ResponseEntity<CompanyResponse> getCompanies(String industryName,String location,String companyName,Integer GroupOpc, Integer SortOpc) {
         StringBuilder sqlCompany=new StringBuilder("select c.*, i.name as industry from company c join industry i on c.industry_id = i.id \n" + //
                         "where (i.name = ? or ? is null or ? = '') \n" + //
                         "and (c.location = ? or ? is null or ? = '') \n" + //
@@ -45,6 +45,22 @@ public class CompanyDao {
                         "and (c.location = ? or ? is null or ? = '') \n" + //
                         "and (c.name like ? OR ? IS NULL OR ? = '') \n" + //
                         "and c.favorite=true  ");
+
+        if(GroupOpc!=null && GroupOpc!=0){
+            switch (GroupOpc) {
+                case 1:
+                sqlCompany.append(" group by c.location ");
+                sqlFavCompany.append(" group by c.location ");
+                    break;
+                case 2:
+                sqlCompany.append(" group by i.name ");
+                sqlFavCompany.append(" group by i.name ");
+                    break;
+                default:
+                    break;
+            }
+        }
+        
         if(SortOpc!=null && SortOpc!=0){
             switch (SortOpc) {
                 case 1:
@@ -84,6 +100,8 @@ public class CompanyDao {
                 datas.setLocation(rs.getString("location"));
                 datas.setIndustry(rs.getString("industry"));
                 datas.setFav(rs.getBoolean("favorite"));
+                datas.setCreated_at(rs.getTimestamp("created_at"));
+                datas.setUpdated_at(rs.getTimestamp("updated_at"));
                 return datas;
                 });
     
@@ -94,6 +112,8 @@ public class CompanyDao {
                 datas.setLocation(rs.getString("location"));
                 datas.setIndustry(rs.getString("industry"));
                 datas.setFav(rs.getBoolean("favorite"));
+                datas.setCreated_at(rs.getTimestamp("created_at"));
+                datas.setUpdated_at(rs.getTimestamp("updated_at"));
                 return datas;
                 });
     
