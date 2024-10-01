@@ -23,8 +23,15 @@ public class Filtro implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-        // Set CORS headers
-        httpResponse.setHeader("Access-Control-Allow-Origin", "http://localhost:5173"); // Allow specific origin
+        // Get the origin of the request
+        String origin = httpRequest.getHeader("Origin");
+
+        // Allow specific origins: localhost and leadifynow.com
+        if ("http://localhost:5173".equals(origin) || "https://leadifynow.com".equals(origin)) {
+            httpResponse.setHeader("Access-Control-Allow-Origin", origin); // Set dynamic origin
+        }
+
+        // Set other CORS headers
         httpResponse.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         httpResponse.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin");
         httpResponse.setHeader("Access-Control-Allow-Credentials", "true");
