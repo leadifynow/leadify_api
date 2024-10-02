@@ -54,7 +54,7 @@ public class BookedController {
     public ResponseEntity<Page<Booked>> searchAllBookedByWorkspaceId(
             @RequestParam String workspaceId,
             @RequestParam(defaultValue = "", required = false) String search, // Search by Id or email
-            @PageableDefault(page = 0, size = 10) Pageable pageable) {
+            @PageableDefault(page = 0, size = 20) Pageable pageable) {
 
         return bookedDao.SearchAllBooked(workspaceId, pageable, search);
     }
