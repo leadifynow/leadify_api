@@ -88,6 +88,7 @@
 		<dependency>
 			<groupId>org.springframework.data</groupId>
 			<artifactId>spring-data-commons</artifactId>
+			<version>3.3.4</version>
 		</dependency>
 
 	</dependencies>

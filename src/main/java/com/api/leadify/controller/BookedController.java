@@ -46,7 +46,7 @@ public class BookedController {
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "workspace") String filterBy, // Filter by workspace or company
             @RequestParam(defaultValue = "Newest") String sortBy, // Sort by Newest, Oldest, or Last Updated
-            @PageableDefault(page = 0, size = 10) Pageable pageable) {
+            @PageableDefault(page = 0, size = 20) Pageable pageable) {
 
         return bookedDao.getBooked(companyId, workspaceId, pageable, match, startDate, endDate, filterBy, sortBy);
     }
