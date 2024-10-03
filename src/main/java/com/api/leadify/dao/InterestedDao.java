@@ -796,6 +796,11 @@ public class InterestedDao {
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("workspace", workspaceId.toString());
 
+        List<String> excludedStageNames =
+        Arrays.asList("Not a Fit", "Completed", "Phone Call", "Other");
+        sqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
+        params.addValue("excludedStageNames", excludedStageNames);
+
         //Add Search Parameter 
         if (search != null && !search.trim().isEmpty()) {
             try {
@@ -832,7 +837,8 @@ public class InterestedDao {
                 .append("WHERE i.workspace = :workspace ")
                 .append("AND i.manager IS NULL ")
                 .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
-
+        
+        countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
 
         if (search != null && !search.trim().isEmpty()) {
             try {
