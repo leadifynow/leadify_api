@@ -331,8 +331,7 @@ public class InterestedDao {
                     .append("LEFT JOIN stage s ON i.stage_id = s.id ")
                     .append("WHERE i.workspace = :workspace ")
                     .append("AND i.manager IS NULL ")
-                    .append("AND i.booked = :booked ")
-                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+                    .append("AND i.booked = :booked ");
 
             // Set query parameters
             MapSqlParameterSource params = new MapSqlParameterSource();
@@ -351,17 +350,15 @@ public class InterestedDao {
                 params.addValue("excludedStageNames", excludedStageNames);
             }
 
+            // Optionally remove or adjust the filtering condition
+            // Comment out or delete the following line to include all leads
+            // sqlBuilder.append("AND (i.stage_id IS NULL OR i.next_update IS NULL OR i.next_update <= CURDATE()) ");
+
             // Determine the ORDER BY clause based on sortBy
             String orderByClause;
             if (sortBy == null) {
-                // Default sorting
-                orderByClause = "ORDER BY "
-                        + "CASE "
-                        + "WHEN i.stage_id IS NULL THEN 0 "
-                        + "WHEN i.next_update < CURDATE() THEN 1 "
-                        + "WHEN i.next_update = CURDATE() THEN 2 "
-                        + "END, "
-                        + "i.created_at DESC ";
+                // Changed default sorting to newest leads first
+                orderByClause = "ORDER BY i.created_at DESC ";
             } else {
                 switch (sortBy) {
                     case "Newest Leads":
@@ -420,8 +417,7 @@ public class InterestedDao {
                     .append("LEFT JOIN stage s ON i.stage_id = s.id ")
                     .append("WHERE i.workspace = :workspace ")
                     .append("AND i.manager IS NULL ")
-                    .append("AND i.booked = :booked ")
-                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+                    .append("AND i.booked = :booked ");
 
             // Add stageId condition to the count query if stageId parameter is not null
             if (stageId != null) {
@@ -432,6 +428,10 @@ public class InterestedDao {
                 countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
                 // excludedStageNames parameter is already added to params
             }
+
+            // Optionally remove or adjust the filtering condition in the count query
+            // Comment out or delete the following line if removed from the main query
+            // countSqlBuilder.append("AND (i.stage_id IS NULL OR i.next_update IS NULL OR i.next_update <= CURDATE()) ");
 
             String countSql = countSqlBuilder.toString();
 
