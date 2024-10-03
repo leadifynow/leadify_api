@@ -557,9 +557,10 @@ public class InterestedDao {
             return new ResponseEntity<>("Error updating stage for interested item", null, 500);
         }
     }
-    public ResponseEntity<String> updateStageArray(JsonNode stageUpdates) {
+    public ResponseEntity<List<Interested>> updateStageArray(JsonNode stageUpdates) {
         try {
             int updatedStagesCount = 0;
+            List<Interested>list=new ArrayList<>();
 
             for (JsonNode update : stageUpdates) {
                 Integer interestedId = update.get("id").asInt();
@@ -567,6 +568,7 @@ public class InterestedDao {
 
                 String sql = "UPDATE interested SET stage_id = ? WHERE id = ?";
                 int affectedRows = jdbcTemplate.update(sql, stageId, interestedId);
+
 
                 if (affectedRows > 0) {
                     // Retrieve the followup value from the corresponding stage
@@ -589,14 +591,16 @@ public class InterestedDao {
                         String updateNextUpdateSql = "UPDATE interested SET next_update = ? WHERE id = ?";
                         jdbcTemplate.update(updateNextUpdateSql, Timestamp.valueOf(nextUpdate), interestedId);
                     }
-
+                    String InterestedSql = "SELECT * FROM interested WHERE id = ?";
+                    Interested resp = jdbcTemplate.queryForObject(InterestedSql, new BeanPropertyRowMapper<>(Interested.class), interestedId);
+                    list.add(resp);
                     updatedStagesCount++;
                 }
             }
-
-            return new ResponseEntity<>("Updated " + updatedStagesCount + " stages", null, 200);
+            return ResponseEntity.ok(list);
         } catch (Exception e) {
-            return new ResponseEntity<>("Error updating stages for interested items", null, 500);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
     public ResponseEntity<Void> updateManager(int interestedId, int managerId) {

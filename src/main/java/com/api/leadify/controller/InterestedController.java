@@ -105,7 +105,7 @@ public class InterestedController {
         return interestedDao.getAllByManagerAndBookedIsZero(manager);
     }
     @PutMapping("/updateStages")
-    public ResponseEntity<String> updateStageArray(@RequestBody JsonNode stageUpdates) {
+    public ResponseEntity<?> updateStageArray(@RequestBody JsonNode stageUpdates) {
         return  interestedDao.updateStageArray(stageUpdates);
     }
     @PutMapping("/updateStageCustomDate")
