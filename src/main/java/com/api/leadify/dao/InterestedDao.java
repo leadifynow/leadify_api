@@ -53,10 +53,9 @@ public class InterestedDao {
         this.stageDao = stageDao;
     }
     public void createInterested(Interested interested) {
-
         try {
             System.out.println(interested);
-            // Sacamos los valores que necesitamos para validaciones, etc
+            // Extract required values
             UUID workspaceId = interested.getWorkspace();
             UUID campaignId = interested.getCampaign_id();
             String campaignName = interested.getCampaign_name();
@@ -73,9 +72,9 @@ public class InterestedDao {
                 return;
             }
 
-            // Primer si el existe el workspace
+            // Check if the workspace exists
             if (!workspaceDao.workspaceExists(workspaceId)) {
-                // Sino existe lo agregamos
+                // If it doesn't exist, add it
                 Workspace newWorkspace = new Workspace();
                 newWorkspace.setId(workspaceId);
                 newWorkspace.setName("Default Workspace Name");
@@ -87,15 +86,6 @@ public class InterestedDao {
                 mainStage.setName("Main");
                 mainStage.setFollowup(3);
                 ResponseEntity<Integer> createMainStageResponse = stageDao.createStage(mainStage);
-
-//            if (createMainStageResponse.getCode() == 201) {
-//                // Set the Main stage ID as the default stage_id for the Interested entity
-//                interested.setStage_id(createMainStageResponse.getData());
-//            } else {
-//                // Handle error if stage creation fails
-//                System.out.println("Error creating Main stage: " + createMainStageResponse.getMessage());
-//                return; // Exit method
-//            }
 
                 // Check if "Not a Fit" stage exists
                 ResponseEntity<Integer> notFitStageIdResponse = stageDao.getStageIdByName(workspaceId, "Not a Fit");
@@ -128,7 +118,7 @@ public class InterestedDao {
             } else {
                 // Retrieve the ID of the stage with the lowest position for the existing workspace
                 ResponseEntity<Integer> minPositionStageResponse = stageDao.getMinPositionStageId(workspaceId);
-                if (minPositionStageResponse.getStatusCode() != HttpStatus.OK) {
+                if (minPositionStageResponse.getStatusCode() == HttpStatus.OK) { // Corrected condition here
                     Integer minPositionStageId = minPositionStageResponse.getBody();
                     interested.setStage_id(minPositionStageId);
                 } else {
@@ -138,9 +128,9 @@ public class InterestedDao {
                 }
             }
 
-            // Checamos si existe la campaña
+            // Check if the campaign exists
             if(!campaignDao.campaignExists(campaignId)) {
-                // Sino existe la agregamos
+                // If it doesn't exist, add it
                 Campaign newCampaign = new Campaign();
                 newCampaign.setId(campaignId);
                 newCampaign.setWorkspace_id(workspaceId);
@@ -148,7 +138,7 @@ public class InterestedDao {
                 campaignDao.createCampaign(newCampaign);
             }
 
-            // Insertamos en la table interested
+            // Insert into the interested table
             String insertQuery = "INSERT INTO interested (event_type, workspace, campaign_id, campaign_name, lead_email, title, email, " +
                     "website, industry, lastName, firstName, number_of_employees, companyName, linkedin_url, stage_id, booked) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -171,7 +161,7 @@ public class InterestedDao {
                     ps.setString(12, interested.getNumber_of_employees());
                     ps.setString(13, interested.getCompanyName());
                     ps.setString(14, interested.getLinkedin_url());
-                    ps.setObject(15, null); // interested.getStage_id()
+                    ps.setObject(15, interested.getStage_id()); // Use the stage_id from interested
                     ps.setInt(16, 0); // booked status initially set to 0
                     return ps;
                 }, keyHolder);
@@ -214,9 +204,8 @@ public class InterestedDao {
             // Rethrow the exception or handle it as appropriate
             throw new RuntimeException("An error occurred: " + errorMessage, e);
         }
-
-
     }
+
     private String serializeInterested(Interested interested) {
         try {
             // Use Jackson ObjectMapper to serialize the Interested object to JSON
@@ -335,6 +324,12 @@ public class InterestedDao {
                 booked = false;
             }
 
+            // Set the time zone to Monterrey time (UTC-6)
+            ZoneId userZoneId = ZoneId.of("America/Monterrey");
+
+            // Get the current date in the user's time zone
+            LocalDate userToday = LocalDate.now(userZoneId);
+
             // Build the SQL query with named parameters
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.append("SELECT i.* ")
@@ -342,8 +337,7 @@ public class InterestedDao {
                     .append("LEFT JOIN stage s ON i.stage_id = s.id ")
                     .append("WHERE i.workspace = :workspace ")
                     .append("AND i.manager IS NULL ")
-                    .append("AND i.booked = :booked ")
-                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+                    .append("AND i.booked = :booked ");
 
             // Set query parameters
             MapSqlParameterSource params = new MapSqlParameterSource();
@@ -362,49 +356,76 @@ public class InterestedDao {
                 params.addValue("excludedStageNames", excludedStageNames);
             }
 
+            // Initialize variables for date parameters
+            Timestamp startOfTodayTimestamp;
+            Timestamp startOfTomorrowTimestamp;
+
             // Determine the ORDER BY clause based on sortBy
             String orderByClause;
-            if (sortBy == null) {
-                // Default sorting
+
+            // Calculate start and end of today in user's local time zone
+            LocalDateTime startOfToday = userToday.atStartOfDay();
+            LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
+
+            // Convert to UTC
+            Instant startOfTodayUtc = startOfToday.atZone(userZoneId).toInstant();
+            Instant startOfTomorrowUtc = startOfTomorrow.atZone(userZoneId).toInstant();
+
+            // Convert to Timestamp
+            startOfTodayTimestamp = Timestamp.from(startOfTodayUtc);
+            startOfTomorrowTimestamp = Timestamp.from(startOfTomorrowUtc);
+
+            // Set date parameters
+            params.addValue("startOfToday", startOfTodayTimestamp);
+            params.addValue("startOfTomorrow", startOfTomorrowTimestamp);
+
+            if (sortBy == null || "Next update".equalsIgnoreCase(sortBy)) {
+                // Add filtering condition to exclude leads with next_update in the future
+                sqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
+
+                // Set order by clause
                 orderByClause = "ORDER BY "
                         + "CASE "
-                        + "WHEN i.stage_id IS NULL THEN 0 "
-                        + "WHEN i.next_update < CURDATE() THEN 1 "
-                        + "WHEN i.next_update = CURDATE() THEN 2 "
+                        + "WHEN i.next_update < :startOfToday THEN 0 " // Overdue updates
+                        + "WHEN i.next_update >= :startOfToday AND i.next_update < :startOfTomorrow THEN 1 " // Updates due today
+                        + "ELSE 2 " // Null or undefined
                         + "END, "
-                        + "i.created_at DESC ";
+                        + "i.next_update ASC ";
+
+            } else if ("Next Day".equalsIgnoreCase(sortBy)) {
+                // Calculate start of the day after tomorrow
+                LocalDateTime startOfDayAfterTomorrow = startOfTomorrow.plusDays(1);
+                Instant startOfDayAfterTomorrowUtc = startOfDayAfterTomorrow.atZone(userZoneId).toInstant();
+                Timestamp startOfDayAfterTomorrowTimestamp = Timestamp.from(startOfDayAfterTomorrowUtc);
+
+                // Add filtering condition
+                sqlBuilder.append("AND i.next_update >= :startOfTomorrow AND i.next_update < :startOfDayAfterTomorrow ");
+                params.addValue("startOfDayAfterTomorrow", startOfDayAfterTomorrowTimestamp);
+
+                // Set order by clause
+                orderByClause = "ORDER BY i.next_update ASC ";
+
+            } else if ("Newest Leads".equalsIgnoreCase(sortBy) || "Oldest Leads".equalsIgnoreCase(sortBy)) {
+                // For sorting by created_at, no date filtering is needed
+                orderByClause = "ORDER BY i.created_at " + ("Oldest Leads".equalsIgnoreCase(sortBy) ? "ASC " : "DESC ");
+
+            } else if ("Last modified".equalsIgnoreCase(sortBy)) {
+                // For sorting by updated_at, no date filtering is needed
+                orderByClause = "ORDER BY i.updated_at DESC ";
+
             } else {
-                switch (sortBy) {
-                    case "Newest Leads":
-                        orderByClause = "ORDER BY i.created_at DESC ";
-                        break;
-                    case "Oldest Leads":
-                        orderByClause = "ORDER BY i.created_at ASC ";
-                        break;
-                    case "Last modified":
-                        orderByClause = "ORDER BY i.updated_at DESC ";
-                        break;
-                    case "Next update":
-                        // Custom ordering for 'Next update'
-                        orderByClause = "ORDER BY "
-                                + "CASE "
-                                + "WHEN i.next_update < CURDATE() THEN 0 " // Overdue updates
-                                + "WHEN i.next_update = CURDATE() THEN 1 " // Updates due today
-                                + "WHEN i.next_update > CURDATE() THEN 2 " // Future updates
-                                + "ELSE 3 " // Null or undefined
-                                + "END, "
-                                + "i.next_update ASC ";
-                        break;
-                    case "Next Day":
-                        // Filter to get leads that need an update the next day
-                        sqlBuilder.append("AND i.next_update = CURDATE() + INTERVAL 1 DAY ");
-                        orderByClause = "ORDER BY i.next_update ASC ";
-                        break;
-                    default:
-                        // Invalid sortBy value, default to 'Newest Leads'
-                        orderByClause = "ORDER BY i.created_at DESC ";
-                        break;
-                }
+                // Default to 'Next update' sorting
+                // Reuse the logic from the 'Next update' case
+                sqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
+
+                // Set order by clause
+                orderByClause = "ORDER BY "
+                        + "CASE "
+                        + "WHEN i.next_update < :startOfToday THEN 0 " // Overdue updates
+                        + "WHEN i.next_update >= :startOfToday AND i.next_update < :startOfTomorrow THEN 1 " // Updates due today
+                        + "ELSE 2 " // Null or undefined
+                        + "END, "
+                        + "i.next_update ASC ";
             }
 
             // Append ORDER BY, LIMIT, OFFSET
@@ -431,8 +452,7 @@ public class InterestedDao {
                     .append("LEFT JOIN stage s ON i.stage_id = s.id ")
                     .append("WHERE i.workspace = :workspace ")
                     .append("AND i.manager IS NULL ")
-                    .append("AND i.booked = :booked ")
-                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+                    .append("AND i.booked = :booked ");
 
             // Add stageId condition to the count query if stageId parameter is not null
             if (stageId != null) {
@@ -442,6 +462,14 @@ public class InterestedDao {
                 // Add excludedStageNames condition only when stageId is null
                 countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
                 // excludedStageNames parameter is already added to params
+            }
+
+            // Apply the same filtering condition to the count query
+            if (sortBy == null || "Next update".equalsIgnoreCase(sortBy)) {
+                countSqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
+            } else if ("Next Day".equalsIgnoreCase(sortBy)) {
+                countSqlBuilder.append("AND i.next_update >= :startOfTomorrow AND i.next_update < :startOfDayAfterTomorrow ");
+                // startOfDayAfterTomorrow parameter is already added
             }
 
             String countSql = countSqlBuilder.toString();
@@ -776,98 +804,98 @@ public class InterestedDao {
 
 
     public ResponseEntity<Page<Interested>> getInterestedWithOutFilter(
-        UUID workspaceId, int page, int pageSize, String search) {
-    try {
-        // Adjust page number because Spring Data pages are zero-based
-        int adjustedPage = Math.max(page - 1, 0);
-        pageSize = Math.max(pageSize, 1);
-        int offset = adjustedPage * pageSize;
+            UUID workspaceId, int page, int pageSize, String search) {
+        try {
+            // Adjust page number because Spring Data pages are zero-based
+            int adjustedPage = Math.max(page - 1, 0);
+            pageSize = Math.max(pageSize, 1);
+            int offset = adjustedPage * pageSize;
 
-        // Build the SQL query with named parameters
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT i.* ")
-                .append("FROM interested i ")
-                .append("LEFT JOIN stage s ON i.stage_id = s.id ")
-                .append("WHERE i.workspace = :workspace ")
-                .append("AND i.manager IS NULL ")
-                .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+            // Build the SQL query with named parameters
+            StringBuilder sqlBuilder = new StringBuilder();
+            sqlBuilder.append("SELECT i.* ")
+                    .append("FROM interested i ")
+                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
+                    .append("WHERE i.workspace = :workspace ")
+                    .append("AND i.manager IS NULL ")
+                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
 
-        // Set query parameters
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("workspace", workspaceId.toString());
+            // Set query parameters
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("workspace", workspaceId.toString());
 
-        List<String> excludedStageNames =
-        Arrays.asList("Not a Fit", "Completed", "Phone Call", "Other");
-        sqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
-        params.addValue("excludedStageNames", excludedStageNames);
+            List<String> excludedStageNames =
+                    Arrays.asList("Not a Fit", "Completed", "Phone Call", "Other");
+            sqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
+            params.addValue("excludedStageNames", excludedStageNames);
 
-        //Add Search Parameter 
-        if (search != null && !search.trim().isEmpty()) {
-            try {
-                Long searchId = Long.parseLong(search);
-                sqlBuilder.append("AND CAST(i.id AS CHAR) LIKE :searchId ");
-                params.addValue("searchId", search + "%");
-            } catch (NumberFormatException e) {
-                sqlBuilder.append("AND i.email LIKE :searchEmail ");
-                params.addValue("searchEmail", "%" + search + "%");
-            }
-        }
-
-        // Append LIMIT, OFFSET
-        sqlBuilder.append("LIMIT :limit OFFSET :offset");
-
-        params.addValue("limit", pageSize);
-        params.addValue("offset", offset);
-
-        String sql = sqlBuilder.toString();
-
-        // Use NamedParameterJdbcTemplate for named parameters and IN clause handling
-        NamedParameterJdbcTemplate namedJdbcTemplate =
-                new NamedParameterJdbcTemplate(jdbcTemplate);
-
-        // Execute the query to get the data
-        List<Interested> interestedList =
-                namedJdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(Interested.class));
-
-        // Fetch total count for pagination
-        StringBuilder countSqlBuilder = new StringBuilder();
-        countSqlBuilder.append("SELECT COUNT(*) ")
-                .append("FROM interested i ")
-                .append("LEFT JOIN stage s ON i.stage_id = s.id ")
-                .append("WHERE i.workspace = :workspace ")
-                .append("AND i.manager IS NULL ")
-                .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
-        
-        countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
-
-        if (search != null && !search.trim().isEmpty()) {
-            try {
-                Long searchId = Long.parseLong(search);
-                countSqlBuilder.append("AND CAST(i.id AS CHAR) LIKE :searchId ");
-            } catch (NumberFormatException e) {
-                countSqlBuilder.append("AND i.email LIKE :searchEmail ");
+            //Add Search Parameter
+            if (search != null && !search.trim().isEmpty()) {
+                try {
+                    Long searchId = Long.parseLong(search);
+                    sqlBuilder.append("AND CAST(i.id AS CHAR) LIKE :searchId ");
+                    params.addValue("searchId", search + "%");
+                } catch (NumberFormatException e) {
+                    sqlBuilder.append("AND i.email LIKE :searchEmail ");
+                    params.addValue("searchEmail", "%" + search + "%");
                 }
+            }
+
+            // Append LIMIT, OFFSET
+            sqlBuilder.append("LIMIT :limit OFFSET :offset");
+
+            params.addValue("limit", pageSize);
+            params.addValue("offset", offset);
+
+            String sql = sqlBuilder.toString();
+
+            // Use NamedParameterJdbcTemplate for named parameters and IN clause handling
+            NamedParameterJdbcTemplate namedJdbcTemplate =
+                    new NamedParameterJdbcTemplate(jdbcTemplate);
+
+            // Execute the query to get the data
+            List<Interested> interestedList =
+                    namedJdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(Interested.class));
+
+            // Fetch total count for pagination
+            StringBuilder countSqlBuilder = new StringBuilder();
+            countSqlBuilder.append("SELECT COUNT(*) ")
+                    .append("FROM interested i ")
+                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
+                    .append("WHERE i.workspace = :workspace ")
+                    .append("AND i.manager IS NULL ")
+                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+
+            countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
+
+            if (search != null && !search.trim().isEmpty()) {
+                try {
+                    Long searchId = Long.parseLong(search);
+                    countSqlBuilder.append("AND CAST(i.id AS CHAR) LIKE :searchId ");
+                } catch (NumberFormatException e) {
+                    countSqlBuilder.append("AND i.email LIKE :searchEmail ");
+                }
+            }
+
+            String countSql = countSqlBuilder.toString();
+
+            int totalItems = namedJdbcTemplate.queryForObject(countSql, params, Integer.class);
+
+            // Create Pageable instance
+            Pageable pageable = PageRequest.of(adjustedPage, pageSize);
+
+            // Create Page instance
+            Page<Interested> interestedPage =
+                    new PageImpl<>(interestedList, pageable, totalItems);
+
+            // Return the result
+            return ResponseEntity.ok(interestedPage);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Log or handle the exception
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
-
-        String countSql = countSqlBuilder.toString();
-
-        int totalItems = namedJdbcTemplate.queryForObject(countSql, params, Integer.class);
-
-        // Create Pageable instance
-        Pageable pageable = PageRequest.of(adjustedPage, pageSize);
-
-        // Create Page instance
-        Page<Interested> interestedPage =
-                new PageImpl<>(interestedList, pageable, totalItems);
-
-        // Return the result
-        return ResponseEntity.ok(interestedPage);
-
-    } catch (Exception e) {
-        e.printStackTrace();
-        // Log or handle the exception
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
     }
-}
 
 }
