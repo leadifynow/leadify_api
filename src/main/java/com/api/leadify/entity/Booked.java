@@ -19,6 +19,7 @@ public class Booked {
     private String workspace_id;
     private String event_name;
     private String business;
+    private String website;
     private String referral;
     private String meeting_date;
     private String notes;
@@ -90,6 +91,14 @@ public class Booked {
 
     public void setBusiness(String business) {
         this.business = business;
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = website;
     }
 
     public String getReferral() {
