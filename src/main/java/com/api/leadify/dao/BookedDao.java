@@ -41,7 +41,7 @@ public class BookedDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ResponseEntity<Void> createBooked(Booked booked, int companyId) {
+    public ResponseEntity<ApiResponse<?>> createBooked(Booked booked, int companyId) {
         log.info("create booked");
         try {
             JsonNode payloadNode = booked.getPayload();
@@ -70,59 +70,43 @@ public class BookedDao {
 
             UUID workspaceId = null;
             String sql;
-            if (event_name.equals("Mindful Agency - Strategy Consultation")) {
-                sql = "SELECT id FROM workspace WHERE name = ?";
-                try {
-                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Lauren");
-                    log.info("Workspace ID for 'Mindful Agency - Lauren': {}", workspaceId);
-                } catch (EmptyResultDataAccessException e) {
-                    log.warn("No workspace found for the given name 'Mindful Agency - Lauren'.");
-                } catch (DataAccessException e) {
-                    log.error("DataAccessException: ", e);
-                }
-            } else if (event_name.equals("Mindful Agency - Strategy PR Consultation")) {
-                sql = "SELECT id FROM workspace WHERE name = ?";
-                try {
-                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - Natalie");
-                    log.info("Workspace ID for 'Mindful Agency - Natalie': {}", workspaceId);
-                } catch (EmptyResultDataAccessException e) {
-                    log.warn("No workspace found for the given name 'Mindful Agency - Natalie'.");
-                } catch (DataAccessException e) {
-                    log.error("DataAccessException: ", e);
-                }
-            } else if (event_name.equals("MediaBlitz - Discovery Call")) {
-                sql = "SELECT id FROM workspace WHERE name = ?";
-                try {
-                    workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Media Blitz - Michael");
-                    log.info("Workspace ID for 'Media Blitz - Michael': {}", workspaceId);
-                } catch (EmptyResultDataAccessException e) {
-                    log.warn("No workspace found for the given name 'Media Blitz - Michael'.");
-                } catch (DataAccessException e) {
-                    log.error("DataAccessException: ", e);
-                }
-            } else if (event_name.equals("Mindful Agency - Discovery Call") || event_name.equals("Mindful Agency - Follow-Up Call")) {
-                workspaceId = null;
-                log.info("No workspace needed for event '{}'", event_name);
-            } else if (event_name.equals("Leadify - Discovery Call")) {
-                sql = "SELECT id FROM workspace WHERE name = ?";
-                workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Leadify - Chelsea");
-                log.info("Workspace ID for 'Leadify - Chelsea : {}", workspaceId);
-            } else if (event_name.equals("Leadify - Consultation Call")) {
-                sql = "SELECT id FROM workspace WHERE name = ?";
-                workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Leadify - Andre");
-                log.info("Workspace ID for 'Leadify - Consultation Call : {}", workspaceId);
-            } else if (event_name.equals("Priority 1 Meeting")) {
-                sql = "SELECT id FROM workspace WHERE name = ?";
-                workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Royal Logistics - Vincent/Rachel");
-                log.info("Workspace ID for 'Vincent - Rachel : {}", workspaceId);
-            } else if (event_name.equals("Mindful Agency - Initial PR Consultation")) {
-                sql = "SELECT id FROM workspace WHERE name = ?";
-                workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, "Mindful Agency - LinkedIn");
-                log.info("Workspace ID for 'Mindful Agency - LinkedIn : {}", workspaceId);
-            } else {
-                log.warn("Invalid event name: {}", event_name);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-                //return new ApiResponse<>("Invalid event name", null, 400);
+            switch (event_name) {
+                case "Mindful Agency - Strategy Consultation":
+                    workspaceId = fetchWorkspaceId("Mindful Agency - Lauren");
+                    break;
+                case "Mindful Agency - Strategy PR Consultation":
+                case "Mindful Agency - Connect":
+                    workspaceId = fetchWorkspaceId("Mindful Agency - Natalie");
+                    break;
+                case "MediaBlitz - Discovery Call":
+                    workspaceId = fetchWorkspaceId("Media Blitz - Michael");
+                    break;
+                case "Mindful Agency - Initial Consultation":
+                    workspaceId = fetchWorkspaceId("Mindful Agency - Instagram");
+                    break;
+                case "Leadify - Discovery Call":
+                    workspaceId = fetchWorkspaceId("Leadify - Chelsea");
+                    break;
+                case "Priority 1 Meeting":
+                    workspaceId = fetchWorkspaceId("Royal Logistics - Vincent/Rachel");
+                    break;
+                case "Whizzbang Media - Discovery Call":
+                    workspaceId = fetchWorkspaceId("Whizzbang Media - Olivia");
+                    break;
+                case "Mindful Agency - Initial PR Consultation":
+                    workspaceId = fetchWorkspaceId("Mindful Agency - LinkedIn");
+                    break;
+                case "Mindful Agency - Discovery Call":
+                case "Mindful Agency - Follow-Up Call":
+                case "Mindful Agency - Lead Generation Consultation":
+                case "Leadify - Consultation Call":
+                    workspaceId = null;
+                    log.info("No workspace needed for event '{}'", event_name);
+                    break;
+                default:
+                    log.warn("Invalid event name: {}", event_name);
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(new ApiResponse<>("Invalid event name", null, 400));
             }
 
             // Check if the email exists in the interested table
@@ -169,7 +153,7 @@ public class BookedDao {
                 if (finalWorkspaceId != null) {
                     ps.setString(9, finalWorkspaceId.toString());
                 } else {
-                    ps.setNull(9, Types.INTEGER);
+                    ps.setNull(9, Types.VARCHAR);
                 }
                 ps.setString(10, event_name);
                 ps.setString(11, finalPublicist);
@@ -193,40 +177,58 @@ public class BookedDao {
                             "VALUES (?, ?, ?)";
                     jdbcTemplate.update(qaSql, question, answer, bookedId);
 
-                    // Check if the question is "Please provide your business name."
-                    if ("Please provide your business name.".equals(question)) {
-                        // Update the business column in the booked table
-                        String updateBusinessSql = "UPDATE booked SET business = ? WHERE id = ?";
-                        jdbcTemplate.update(updateBusinessSql, answer, bookedId);
-                        log.info("Updated business column for booked ID: {}", bookedId);
-                    }
-
-                    // Check if the question is "How did you hear about Mindful Agency?"
-                    if ("How did you hear about Mindful Agency?".equals(question)) {
-                        // Update the referral column in the booked table
-                        String updateReferralSql = "UPDATE booked SET referral = ? WHERE id = ?";
-                        jdbcTemplate.update(updateReferralSql, answer, bookedId);
-                        log.info("Updated referral column for booked ID: {}", bookedId);
-                    }
-
-                    if ("Please provide your website".equals(question)) {
-                        // Update the website column in the booked table
-                        String updateWebsiteSql = "UPDATE booked SET website = ? WHERE id = ?";
-                        jdbcTemplate.update(updateWebsiteSql, answer, bookedId);
-                        log.info("Updated website column for booked ID: {}", bookedId);
+                    // Update specific fields based on questions
+                    switch (question) {
+                        case "Please provide your business name.":
+                            updateBookedField(bookedId, "business", answer);
+                            break;
+                        case "How did you hear about Mindful Agency?":
+                            updateBookedField(bookedId, "referral", answer);
+                            break;
+                        case "Please provide your website":
+                            updateBookedField(bookedId, "website", answer);
+                            break;
+                        default:
+                            // Handle other questions if necessary
+                            break;
                     }
                 }
             }
-            return ResponseEntity.ok().build();
-            //return new ApiResponse<>("Booked created successfully", null, 201);
+
+            // Return success response
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new ApiResponse<>("Booked created successfully", null, 201));
         } catch (Exception e) {
             log.error("An error occurred: {}", e.getMessage(), e);
             JsonNode payloadNode = booked.getPayload();
             String errorMessage = e.getMessage();
             String insertQuery = "INSERT INTO error_log (error_message, data) VALUES (?, ?)";
             jdbcTemplate.update(insertQuery, errorMessage, payloadNode.toString());
-            throw new RuntimeException("An error occurred: " + errorMessage, e);
+            ApiResponse<?> errorResponse = new ApiResponse<>("An error occurred: " + errorMessage, null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
+    }
+    private UUID fetchWorkspaceId(String workspaceName) {
+        String sql = "SELECT id FROM workspace WHERE name = ?";
+        try {
+            UUID workspaceId = jdbcTemplate.queryForObject(sql, UUID.class, workspaceName);
+            log.info("Workspace ID for '{}': {}", workspaceName, workspaceId);
+            return workspaceId;
+        } catch (EmptyResultDataAccessException e) {
+            log.warn("No workspace found for the given name '{}'.", workspaceName);
+        } catch (DataAccessException e) {
+            log.error("DataAccessException while fetching workspace '{}': ", workspaceName, e);
+        }
+        return null;
+    }
+
+    /**
+     * Helper method to update a specific field in the 'booked' table.
+     */
+    private void updateBookedField(int bookedId, String fieldName, String value) {
+        String updateSql = "UPDATE booked SET " + fieldName + " = ? WHERE id = ?";
+        jdbcTemplate.update(updateSql, value, bookedId);
+        log.info("Updated {} column for booked ID: {}", fieldName, bookedId);
     }
     public ResponseEntity<PaginatedResponse<List<Booked>>> getAllBookedByCompanyId(int companyId, String workspaceId, int page, int pageSize, int filterType, String startDate, String endDate) {
         try {

@@ -28,7 +28,7 @@ public class BookedController {
     }
 
     @PostMapping("/{company_id}")
-    public ResponseEntity<Void> createBooked(@PathVariable("company_id") int companyId, @RequestBody Booked booked) {
+    public ResponseEntity<ApiResponse<?>> createBooked(@PathVariable("company_id") int companyId, @RequestBody Booked booked) {
         return bookedDao.createBooked(booked, companyId);
     }
     @GetMapping("/getByCompany/{companyId}/{workspace_id}/{page}/{pageSize}/{filterType}")
