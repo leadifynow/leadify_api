@@ -350,8 +350,6 @@ public class ReportsDao {
     return ResponseEntity.ok(stageDataList);
 }
 
-
-
     public ResponseEntity<List<Map<String, Object>>> getLeadsGeneral (String workspace, String[] dates){
         String getCompanyIdQuery = "SELECT company_id FROM workspace WHERE id = ?";
 

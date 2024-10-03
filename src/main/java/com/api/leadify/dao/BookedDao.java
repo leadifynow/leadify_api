@@ -26,9 +26,7 @@ import org.springframework.stereotype.Repository;
 import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -335,7 +333,8 @@ public class BookedDao {
         }
     }
     public ResponseEntity<Page<Booked>> getBooked(
-            Integer companyId, String workspaceId, Pageable pageable, String match, String startDate, String endDate, String filterBy, String sortBy) {
+            Integer companyId, String workspaceId, Pageable pageable, String match,
+            String startDate, String endDate, String filterBy, String sortBy) {
         try {
             int page = pageable.getPageNumber();
             int pageSize = pageable.getPageSize();
@@ -380,17 +379,32 @@ public class BookedDao {
                 throw new IllegalArgumentException("Invalid match value. It must be 'All', 'Yes', or 'No'.");
             }
 
+            // Time zone adjustment
+            ZoneId userZoneId = ZoneId.of("America/Monterrey");
+
             // Add filter conditions for startDate and endDate if they are provided
             if (startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty()) {
                 try {
+                    // Parse dates in user's time zone
                     LocalDate startLocalDate = LocalDate.parse(startDate);
                     LocalDate endLocalDate = LocalDate.parse(endDate);
-                    LocalDateTime startDateTime = startLocalDate.atStartOfDay();
-                    LocalDateTime endDateTime = endLocalDate.atTime(LocalTime.MAX); // 23:59:59.999999999
+
+                    // Start of startDate at 00:00:00 in user's time zone
+                    LocalDateTime startOfStartDate = startLocalDate.atStartOfDay();
+                    // End of endDate at 23:59:59.999999999 in user's time zone
+                    LocalDateTime endOfEndDate = endLocalDate.atTime(LocalTime.MAX);
+
+                    // Convert to UTC
+                    Instant startInstantUtc = startOfStartDate.atZone(userZoneId).toInstant();
+                    Instant endInstantUtc = endOfEndDate.atZone(userZoneId).toInstant();
+
+                    // Convert to Timestamp
+                    Timestamp startTimestamp = Timestamp.from(startInstantUtc);
+                    Timestamp endTimestamp = Timestamp.from(endInstantUtc);
 
                     baseSql.append(" AND created_at BETWEEN :startDate AND :endDate");
-                    params.addValue("startDate", Timestamp.valueOf(startDateTime));
-                    params.addValue("endDate", Timestamp.valueOf(endDateTime));
+                    params.addValue("startDate", startTimestamp);
+                    params.addValue("endDate", endTimestamp);
                 } catch (DateTimeParseException e) {
                     throw new IllegalArgumentException("Invalid date format for startDate or endDate. Expected format is yyyy-MM-dd.");
                 }

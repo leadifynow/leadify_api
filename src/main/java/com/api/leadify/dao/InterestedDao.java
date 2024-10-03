@@ -324,6 +324,12 @@ public class InterestedDao {
                 booked = false;
             }
 
+            // Set the time zone to Monterrey time (UTC-6)
+            ZoneId userZoneId = ZoneId.of("America/Monterrey");
+
+            // Get the current date in the user's time zone
+            LocalDate userToday = LocalDate.now(userZoneId);
+
             // Build the SQL query with named parameters
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.append("SELECT i.* ")
@@ -350,57 +356,76 @@ public class InterestedDao {
                 params.addValue("excludedStageNames", excludedStageNames);
             }
 
-            // Add filtering condition to exclude leads with next_update in the future
-            sqlBuilder.append("AND (i.next_update <= CURDATE() OR i.next_update IS NULL) ");
+            // Initialize variables for date parameters
+            Timestamp startOfTodayTimestamp;
+            Timestamp startOfTomorrowTimestamp;
 
             // Determine the ORDER BY clause based on sortBy
             String orderByClause;
-            if (sortBy == null) {
-                // Default sorting: Overdue first, then today, then nulls
+
+            // Calculate start and end of today in user's local time zone
+            LocalDateTime startOfToday = userToday.atStartOfDay();
+            LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
+
+            // Convert to UTC
+            Instant startOfTodayUtc = startOfToday.atZone(userZoneId).toInstant();
+            Instant startOfTomorrowUtc = startOfTomorrow.atZone(userZoneId).toInstant();
+
+            // Convert to Timestamp
+            startOfTodayTimestamp = Timestamp.from(startOfTodayUtc);
+            startOfTomorrowTimestamp = Timestamp.from(startOfTomorrowUtc);
+
+            // Set date parameters
+            params.addValue("startOfToday", startOfTodayTimestamp);
+            params.addValue("startOfTomorrow", startOfTomorrowTimestamp);
+
+            if (sortBy == null || "Next update".equalsIgnoreCase(sortBy)) {
+                // Add filtering condition to exclude leads with next_update in the future
+                sqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
+
+                // Set order by clause
                 orderByClause = "ORDER BY "
                         + "CASE "
-                        + "WHEN i.next_update < CURDATE() THEN 0 " // Overdue updates
-                        + "WHEN i.next_update = CURDATE() THEN 1 " // Updates due today
+                        + "WHEN i.next_update < :startOfToday THEN 0 " // Overdue updates
+                        + "WHEN i.next_update >= :startOfToday AND i.next_update < :startOfTomorrow THEN 1 " // Updates due today
                         + "ELSE 2 " // Null or undefined
                         + "END, "
                         + "i.next_update ASC ";
+
+            } else if ("Next Day".equalsIgnoreCase(sortBy)) {
+                // Calculate start of the day after tomorrow
+                LocalDateTime startOfDayAfterTomorrow = startOfTomorrow.plusDays(1);
+                Instant startOfDayAfterTomorrowUtc = startOfDayAfterTomorrow.atZone(userZoneId).toInstant();
+                Timestamp startOfDayAfterTomorrowTimestamp = Timestamp.from(startOfDayAfterTomorrowUtc);
+
+                // Add filtering condition
+                sqlBuilder.append("AND i.next_update >= :startOfTomorrow AND i.next_update < :startOfDayAfterTomorrow ");
+                params.addValue("startOfDayAfterTomorrow", startOfDayAfterTomorrowTimestamp);
+
+                // Set order by clause
+                orderByClause = "ORDER BY i.next_update ASC ";
+
+            } else if ("Newest Leads".equalsIgnoreCase(sortBy) || "Oldest Leads".equalsIgnoreCase(sortBy)) {
+                // For sorting by created_at, no date filtering is needed
+                orderByClause = "ORDER BY i.created_at " + ("Oldest Leads".equalsIgnoreCase(sortBy) ? "ASC " : "DESC ");
+
+            } else if ("Last modified".equalsIgnoreCase(sortBy)) {
+                // For sorting by updated_at, no date filtering is needed
+                orderByClause = "ORDER BY i.updated_at DESC ";
+
             } else {
-                switch (sortBy) {
-                    case "Newest Leads":
-                        orderByClause = "ORDER BY i.created_at DESC ";
-                        break;
-                    case "Oldest Leads":
-                        orderByClause = "ORDER BY i.created_at ASC ";
-                        break;
-                    case "Last modified":
-                        orderByClause = "ORDER BY i.updated_at DESC ";
-                        break;
-                    case "Next update":
-                        // Custom ordering for 'Next update'
-                        orderByClause = "ORDER BY "
-                                + "CASE "
-                                + "WHEN i.next_update < CURDATE() THEN 0 " // Overdue updates
-                                + "WHEN i.next_update = CURDATE() THEN 1 " // Updates due today
-                                + "ELSE 2 " // Null or undefined
-                                + "END, "
-                                + "i.next_update ASC ";
-                        break;
-                    case "Next Day":
-                        // Filter to get leads that need an update the next day
-                        sqlBuilder.append("AND i.next_update = CURDATE() + INTERVAL 1 DAY ");
-                        orderByClause = "ORDER BY i.next_update ASC ";
-                        break;
-                    default:
-                        // Invalid sortBy value, default to 'Next update' sorting
-                        orderByClause = "ORDER BY "
-                                + "CASE "
-                                + "WHEN i.next_update < CURDATE() THEN 0 "
-                                + "WHEN i.next_update = CURDATE() THEN 1 "
-                                + "ELSE 2 "
-                                + "END, "
-                                + "i.next_update ASC ";
-                        break;
-                }
+                // Default to 'Next update' sorting
+                // Reuse the logic from the 'Next update' case
+                sqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
+
+                // Set order by clause
+                orderByClause = "ORDER BY "
+                        + "CASE "
+                        + "WHEN i.next_update < :startOfToday THEN 0 " // Overdue updates
+                        + "WHEN i.next_update >= :startOfToday AND i.next_update < :startOfTomorrow THEN 1 " // Updates due today
+                        + "ELSE 2 " // Null or undefined
+                        + "END, "
+                        + "i.next_update ASC ";
             }
 
             // Append ORDER BY, LIMIT, OFFSET
@@ -440,7 +465,12 @@ public class InterestedDao {
             }
 
             // Apply the same filtering condition to the count query
-            countSqlBuilder.append("AND (i.next_update <= CURDATE() OR i.next_update IS NULL) ");
+            if (sortBy == null || "Next update".equalsIgnoreCase(sortBy)) {
+                countSqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
+            } else if ("Next Day".equalsIgnoreCase(sortBy)) {
+                countSqlBuilder.append("AND i.next_update >= :startOfTomorrow AND i.next_update < :startOfDayAfterTomorrow ");
+                // startOfDayAfterTomorrow parameter is already added
+            }
 
             String countSql = countSqlBuilder.toString();
 
