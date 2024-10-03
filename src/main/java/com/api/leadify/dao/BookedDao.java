@@ -818,4 +818,30 @@ public class BookedDao {
             //return new ApiResponse<>("Failed to mark booked item as deleted: " + e.getMessage(), null, 500);
         }
     }
+
+    public ResponseEntity<Booked> updateBooked(Booked booked) {
+        try {
+            String sql = "update booked set email=?, meeting_date=?, publicist=?, name=?, business=?, website=? where id=?;";
+            int affectedRows = jdbcTemplate.update(
+                    sql,
+                    booked.getEmail(),
+                    booked.getMeeting_date(),
+                    booked.getPublicist(),
+                    booked.getName(),
+                    booked.getBusiness(),
+                    booked.getWebsite(),
+                    booked.getId()
+            );
+
+            if (affectedRows > 0) {
+                String fetchNewBookedQuery = "select * from booked where id=?";
+                Booked updatedBook = jdbcTemplate.queryForObject(fetchNewBookedQuery, new BeanPropertyRowMapper<>(Booked.class), booked.getId());
+                return ResponseEntity.ok(updatedBook);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
 }

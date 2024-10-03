@@ -98,4 +98,8 @@ public class BookedController {
     public ResponseEntity<Void> deleteBooked(@PathVariable int bookedId) {
         return bookedDao.deleteBooked(bookedId);
     }
+    @PutMapping("/update")
+    public ResponseEntity<Booked> updateBooked(@RequestBody Booked booked) {
+        return bookedDao.updateBooked(booked);
+    }
 }
