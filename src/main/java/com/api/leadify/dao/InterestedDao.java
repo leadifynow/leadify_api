@@ -804,92 +804,98 @@ public class InterestedDao {
 
 
     public ResponseEntity<Page<Interested>> getInterestedWithOutFilter(
-        UUID workspaceId, int page, int pageSize, String search) {
-    try {
-        // Adjust page number because Spring Data pages are zero-based
-        int adjustedPage = Math.max(page - 1, 0);
-        pageSize = Math.max(pageSize, 1);
-        int offset = adjustedPage * pageSize;
+            UUID workspaceId, int page, int pageSize, String search) {
+        try {
+            // Adjust page number because Spring Data pages are zero-based
+            int adjustedPage = Math.max(page - 1, 0);
+            pageSize = Math.max(pageSize, 1);
+            int offset = adjustedPage * pageSize;
 
-        // Build the SQL query with named parameters
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT i.* ")
-                .append("FROM interested i ")
-                .append("LEFT JOIN stage s ON i.stage_id = s.id ")
-                .append("WHERE i.workspace = :workspace ")
-                .append("AND i.manager IS NULL ")
-                .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+            // Build the SQL query with named parameters
+            StringBuilder sqlBuilder = new StringBuilder();
+            sqlBuilder.append("SELECT i.* ")
+                    .append("FROM interested i ")
+                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
+                    .append("WHERE i.workspace = :workspace ")
+                    .append("AND i.manager IS NULL ")
+                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
 
-        // Set query parameters
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("workspace", workspaceId.toString());
+            // Set query parameters
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("workspace", workspaceId.toString());
 
-        //Add Search Parameter 
-        if (search != null && !search.trim().isEmpty()) {
-            try {
-                Long searchId = Long.parseLong(search);
-                sqlBuilder.append("AND CAST(i.id AS CHAR) LIKE :searchId ");
-                params.addValue("searchId", search + "%");
-            } catch (NumberFormatException e) {
-                sqlBuilder.append("AND i.email LIKE :searchEmail ");
-                params.addValue("searchEmail", "%" + search + "%");
-            }
-        }
+            List<String> excludedStageNames =
+                    Arrays.asList("Not a Fit", "Completed", "Phone Call", "Other");
+            sqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
+            params.addValue("excludedStageNames", excludedStageNames);
 
-        // Append LIMIT, OFFSET
-        sqlBuilder.append("LIMIT :limit OFFSET :offset");
-
-        params.addValue("limit", pageSize);
-        params.addValue("offset", offset);
-
-        String sql = sqlBuilder.toString();
-
-        // Use NamedParameterJdbcTemplate for named parameters and IN clause handling
-        NamedParameterJdbcTemplate namedJdbcTemplate =
-                new NamedParameterJdbcTemplate(jdbcTemplate);
-
-        // Execute the query to get the data
-        List<Interested> interestedList =
-                namedJdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(Interested.class));
-
-        // Fetch total count for pagination
-        StringBuilder countSqlBuilder = new StringBuilder();
-        countSqlBuilder.append("SELECT COUNT(*) ")
-                .append("FROM interested i ")
-                .append("LEFT JOIN stage s ON i.stage_id = s.id ")
-                .append("WHERE i.workspace = :workspace ")
-                .append("AND i.manager IS NULL ")
-                .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
-
-
-        if (search != null && !search.trim().isEmpty()) {
-            try {
-                Long searchId = Long.parseLong(search);
-                countSqlBuilder.append("AND CAST(i.id AS CHAR) LIKE :searchId ");
-            } catch (NumberFormatException e) {
-                countSqlBuilder.append("AND i.email LIKE :searchEmail ");
+            //Add Search Parameter
+            if (search != null && !search.trim().isEmpty()) {
+                try {
+                    Long searchId = Long.parseLong(search);
+                    sqlBuilder.append("AND CAST(i.id AS CHAR) LIKE :searchId ");
+                    params.addValue("searchId", search + "%");
+                } catch (NumberFormatException e) {
+                    sqlBuilder.append("AND i.email LIKE :searchEmail ");
+                    params.addValue("searchEmail", "%" + search + "%");
                 }
+            }
+
+            // Append LIMIT, OFFSET
+            sqlBuilder.append("LIMIT :limit OFFSET :offset");
+
+            params.addValue("limit", pageSize);
+            params.addValue("offset", offset);
+
+            String sql = sqlBuilder.toString();
+
+            // Use NamedParameterJdbcTemplate for named parameters and IN clause handling
+            NamedParameterJdbcTemplate namedJdbcTemplate =
+                    new NamedParameterJdbcTemplate(jdbcTemplate);
+
+            // Execute the query to get the data
+            List<Interested> interestedList =
+                    namedJdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(Interested.class));
+
+            // Fetch total count for pagination
+            StringBuilder countSqlBuilder = new StringBuilder();
+            countSqlBuilder.append("SELECT COUNT(*) ")
+                    .append("FROM interested i ")
+                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
+                    .append("WHERE i.workspace = :workspace ")
+                    .append("AND i.manager IS NULL ")
+                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+
+            countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
+
+            if (search != null && !search.trim().isEmpty()) {
+                try {
+                    Long searchId = Long.parseLong(search);
+                    countSqlBuilder.append("AND CAST(i.id AS CHAR) LIKE :searchId ");
+                } catch (NumberFormatException e) {
+                    countSqlBuilder.append("AND i.email LIKE :searchEmail ");
+                }
+            }
+
+            String countSql = countSqlBuilder.toString();
+
+            int totalItems = namedJdbcTemplate.queryForObject(countSql, params, Integer.class);
+
+            // Create Pageable instance
+            Pageable pageable = PageRequest.of(adjustedPage, pageSize);
+
+            // Create Page instance
+            Page<Interested> interestedPage =
+                    new PageImpl<>(interestedList, pageable, totalItems);
+
+            // Return the result
+            return ResponseEntity.ok(interestedPage);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Log or handle the exception
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
-
-        String countSql = countSqlBuilder.toString();
-
-        int totalItems = namedJdbcTemplate.queryForObject(countSql, params, Integer.class);
-
-        // Create Pageable instance
-        Pageable pageable = PageRequest.of(adjustedPage, pageSize);
-
-        // Create Page instance
-        Page<Interested> interestedPage =
-                new PageImpl<>(interestedList, pageable, totalItems);
-
-        // Return the result
-        return ResponseEntity.ok(interestedPage);
-
-    } catch (Exception e) {
-        e.printStackTrace();
-        // Log or handle the exception
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
     }
-}
 
 }
