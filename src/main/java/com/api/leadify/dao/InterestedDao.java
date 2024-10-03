@@ -493,7 +493,6 @@ public class InterestedDao {
         }
     }
 
-
     private boolean isStageName(int stageId, UUID workspaceId, String stageName) {
         int stageIdFromDB = getStageIdForName(stageName, workspaceId);
         return stageId == stageIdFromDB;
@@ -800,9 +799,6 @@ public class InterestedDao {
             return new ResponseEntity<>("Error updating stages and next update date for interested items: " + e.getMessage(), null, 500);
         }
     }
-
-
-
     public ResponseEntity<Page<Interested>> getInterestedWithOutFilter(
             UUID workspaceId, int page, int pageSize, String search) {
         try {
