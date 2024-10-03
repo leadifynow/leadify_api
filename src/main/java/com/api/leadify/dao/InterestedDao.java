@@ -350,15 +350,20 @@ public class InterestedDao {
                 params.addValue("excludedStageNames", excludedStageNames);
             }
 
-            // Optionally remove or adjust the filtering condition
-            // Comment out or delete the following line to include all leads
-            // sqlBuilder.append("AND (i.stage_id IS NULL OR i.next_update IS NULL OR i.next_update <= CURDATE()) ");
+            // Add filtering condition to exclude leads with next_update in the future
+            sqlBuilder.append("AND (i.next_update <= CURDATE() OR i.next_update IS NULL) ");
 
             // Determine the ORDER BY clause based on sortBy
             String orderByClause;
             if (sortBy == null) {
-                // Changed default sorting to newest leads first
-                orderByClause = "ORDER BY i.created_at DESC ";
+                // Default sorting: Overdue first, then today, then nulls
+                orderByClause = "ORDER BY "
+                        + "CASE "
+                        + "WHEN i.next_update < CURDATE() THEN 0 " // Overdue updates
+                        + "WHEN i.next_update = CURDATE() THEN 1 " // Updates due today
+                        + "ELSE 2 " // Null or undefined
+                        + "END, "
+                        + "i.next_update ASC ";
             } else {
                 switch (sortBy) {
                     case "Newest Leads":
@@ -376,8 +381,7 @@ public class InterestedDao {
                                 + "CASE "
                                 + "WHEN i.next_update < CURDATE() THEN 0 " // Overdue updates
                                 + "WHEN i.next_update = CURDATE() THEN 1 " // Updates due today
-                                + "WHEN i.next_update > CURDATE() THEN 2 " // Future updates
-                                + "ELSE 3 " // Null or undefined
+                                + "ELSE 2 " // Null or undefined
                                 + "END, "
                                 + "i.next_update ASC ";
                         break;
@@ -387,8 +391,14 @@ public class InterestedDao {
                         orderByClause = "ORDER BY i.next_update ASC ";
                         break;
                     default:
-                        // Invalid sortBy value, default to 'Newest Leads'
-                        orderByClause = "ORDER BY i.created_at DESC ";
+                        // Invalid sortBy value, default to 'Next update' sorting
+                        orderByClause = "ORDER BY "
+                                + "CASE "
+                                + "WHEN i.next_update < CURDATE() THEN 0 "
+                                + "WHEN i.next_update = CURDATE() THEN 1 "
+                                + "ELSE 2 "
+                                + "END, "
+                                + "i.next_update ASC ";
                         break;
                 }
             }
@@ -429,9 +439,8 @@ public class InterestedDao {
                 // excludedStageNames parameter is already added to params
             }
 
-            // Optionally remove or adjust the filtering condition in the count query
-            // Comment out or delete the following line if removed from the main query
-            // countSqlBuilder.append("AND (i.stage_id IS NULL OR i.next_update IS NULL OR i.next_update <= CURDATE()) ");
+            // Apply the same filtering condition to the count query
+            countSqlBuilder.append("AND (i.next_update <= CURDATE() OR i.next_update IS NULL) ");
 
             String countSql = countSqlBuilder.toString();
 

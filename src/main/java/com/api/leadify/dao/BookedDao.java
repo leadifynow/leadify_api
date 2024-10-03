@@ -345,11 +345,13 @@ public class BookedDao {
             StringBuilder baseSql = new StringBuilder();
             MapSqlParameterSource params = new MapSqlParameterSource();
 
+            // Initialize NamedParameterJdbcTemplate once
+            NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+
             // Handle filterBy logic
             if ("company".equalsIgnoreCase(filterBy)) {
                 // Retrieve company_id from workspace table if filterBy is company
                 String companySql = "SELECT company_id FROM workspace WHERE id = :workspaceId";
-                NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
                 Integer retrievedCompanyId = namedJdbcTemplate.queryForObject(companySql,
                         new MapSqlParameterSource("workspaceId", workspaceId), Integer.class);
 
@@ -409,7 +411,6 @@ public class BookedDao {
 
             // Query to count total bookings
             String countSql = "SELECT COUNT(*)" + baseSql.toString();
-            NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
             int totalItems = namedJdbcTemplate.queryForObject(countSql, params, Integer.class);
 
             // Construct SQL query for retrieving paginated bookings
@@ -423,11 +424,9 @@ public class BookedDao {
             // Create Page instance
             Page<Booked> bookedPage = new PageImpl<>(bookedList, pageable, totalItems);
 
-            if (bookedList.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-            } else {
-                return ResponseEntity.ok(bookedPage);
-            }
+            // Always return the Page object, even if it's empty
+            return ResponseEntity.ok(bookedPage);
+
         } catch (IllegalArgumentException e) {
             // Return 400 Bad Request for invalid input
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
@@ -437,8 +436,8 @@ public class BookedDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
-    
-    
+
+
     public ResponseEntity<Page<Booked>> SearchAllBooked(
          String workspaceId, Pageable pageable, String Search) {
     try {
