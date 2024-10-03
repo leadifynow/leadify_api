@@ -53,10 +53,9 @@ public class InterestedDao {
         this.stageDao = stageDao;
     }
     public void createInterested(Interested interested) {
-
         try {
             System.out.println(interested);
-            // Sacamos los valores que necesitamos para validaciones, etc
+            // Extract required values
             UUID workspaceId = interested.getWorkspace();
             UUID campaignId = interested.getCampaign_id();
             String campaignName = interested.getCampaign_name();
@@ -73,9 +72,9 @@ public class InterestedDao {
                 return;
             }
 
-            // Primer si el existe el workspace
+            // Check if the workspace exists
             if (!workspaceDao.workspaceExists(workspaceId)) {
-                // Sino existe lo agregamos
+                // If it doesn't exist, add it
                 Workspace newWorkspace = new Workspace();
                 newWorkspace.setId(workspaceId);
                 newWorkspace.setName("Default Workspace Name");
@@ -87,15 +86,6 @@ public class InterestedDao {
                 mainStage.setName("Main");
                 mainStage.setFollowup(3);
                 ResponseEntity<Integer> createMainStageResponse = stageDao.createStage(mainStage);
-
-//            if (createMainStageResponse.getCode() == 201) {
-//                // Set the Main stage ID as the default stage_id for the Interested entity
-//                interested.setStage_id(createMainStageResponse.getData());
-//            } else {
-//                // Handle error if stage creation fails
-//                System.out.println("Error creating Main stage: " + createMainStageResponse.getMessage());
-//                return; // Exit method
-//            }
 
                 // Check if "Not a Fit" stage exists
                 ResponseEntity<Integer> notFitStageIdResponse = stageDao.getStageIdByName(workspaceId, "Not a Fit");
@@ -128,7 +118,7 @@ public class InterestedDao {
             } else {
                 // Retrieve the ID of the stage with the lowest position for the existing workspace
                 ResponseEntity<Integer> minPositionStageResponse = stageDao.getMinPositionStageId(workspaceId);
-                if (minPositionStageResponse.getStatusCode() != HttpStatus.OK) {
+                if (minPositionStageResponse.getStatusCode() == HttpStatus.OK) { // Corrected condition here
                     Integer minPositionStageId = minPositionStageResponse.getBody();
                     interested.setStage_id(minPositionStageId);
                 } else {
@@ -138,9 +128,9 @@ public class InterestedDao {
                 }
             }
 
-            // Checamos si existe la campaña
+            // Check if the campaign exists
             if(!campaignDao.campaignExists(campaignId)) {
-                // Sino existe la agregamos
+                // If it doesn't exist, add it
                 Campaign newCampaign = new Campaign();
                 newCampaign.setId(campaignId);
                 newCampaign.setWorkspace_id(workspaceId);
@@ -148,7 +138,7 @@ public class InterestedDao {
                 campaignDao.createCampaign(newCampaign);
             }
 
-            // Insertamos en la table interested
+            // Insert into the interested table
             String insertQuery = "INSERT INTO interested (event_type, workspace, campaign_id, campaign_name, lead_email, title, email, " +
                     "website, industry, lastName, firstName, number_of_employees, companyName, linkedin_url, stage_id, booked) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -171,7 +161,7 @@ public class InterestedDao {
                     ps.setString(12, interested.getNumber_of_employees());
                     ps.setString(13, interested.getCompanyName());
                     ps.setString(14, interested.getLinkedin_url());
-                    ps.setObject(15, null); // interested.getStage_id()
+                    ps.setObject(15, interested.getStage_id()); // Use the stage_id from interested
                     ps.setInt(16, 0); // booked status initially set to 0
                     return ps;
                 }, keyHolder);
@@ -214,9 +204,8 @@ public class InterestedDao {
             // Rethrow the exception or handle it as appropriate
             throw new RuntimeException("An error occurred: " + errorMessage, e);
         }
-
-
     }
+
     private String serializeInterested(Interested interested) {
         try {
             // Use Jackson ObjectMapper to serialize the Interested object to JSON
