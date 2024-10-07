@@ -394,8 +394,10 @@ public class InterestedDao {
                 // Add filtering condition to exclude leads with next_update in the future
                 sqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
 
-                // Set order by clause
+                // Set order by clause to prioritize records with stage_id as NULL and newly created
                 orderByClause = "ORDER BY "
+                        + "CASE WHEN i.stage_id IS NULL THEN 0 ELSE 1 END, "
+                        + "CASE WHEN i.stage_id IS NULL THEN i.created_at END DESC, "
                         + "CASE "
                         + "WHEN i.next_update < :startOfToday THEN 0 " // Overdue updates
                         + "WHEN i.next_update >= :startOfToday AND i.next_update < :startOfTomorrow THEN 1 " // Updates due today
@@ -425,12 +427,13 @@ public class InterestedDao {
                 orderByClause = "ORDER BY i.updated_at DESC ";
 
             } else {
-                // Default to 'Next update' sorting
-                // Reuse the logic from the 'Next update' case
+                // Default to 'Next update' sorting with the same modifications
                 sqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
 
                 // Set order by clause
                 orderByClause = "ORDER BY "
+                        + "CASE WHEN i.stage_id IS NULL THEN 0 ELSE 1 END, "
+                        + "CASE WHEN i.stage_id IS NULL THEN i.created_at END DESC, "
                         + "CASE "
                         + "WHEN i.next_update < :startOfToday THEN 0 " // Overdue updates
                         + "WHEN i.next_update >= :startOfToday AND i.next_update < :startOfTomorrow THEN 1 " // Updates due today
