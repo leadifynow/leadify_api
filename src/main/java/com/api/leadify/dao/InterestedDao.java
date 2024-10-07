@@ -81,6 +81,9 @@ public class InterestedDao {
                 return;
             }
 
+            // Set stage_id to null by default
+            interested.setStage_id(null);
+
             // Check if the workspace exists
             log.info("Checking if workspace exists for ID: {}", workspaceId);
             if (!workspaceDao.workspaceExists(workspaceId)) {
@@ -143,7 +146,6 @@ public class InterestedDao {
                 } else {
                     // Log error if retrieving the minimum position stage fails
                     log.error("Error retrieving minimum position stage: {}", minPositionStageResponse);
-                    return;
                 }
             }
 
@@ -183,7 +185,7 @@ public class InterestedDao {
                     ps.setString(12, interested.getNumber_of_employees());
                     ps.setString(13, interested.getCompanyName());
                     ps.setString(14, interested.getLinkedin_url());
-                    ps.setObject(15, interested.getStage_id());
+                    ps.setObject(15, interested.getStage_id()); // Can be null if not set
                     ps.setInt(16, 0); // booked status initially set to 0
                     return ps;
                 }, keyHolder);
