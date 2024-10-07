@@ -27,10 +27,10 @@ public class Filtro implements Filter {
         String origin = httpRequest.getHeader("Origin");
 
         // Log the request origin and other info
-        log.info("Request received from origin: {}", origin);
+        /*log.info("Request received from origin: {}", origin);
         log.info("Request URL: {}", httpRequest.getRequestURL());
         log.info("Request Method: {}", httpRequest.getMethod());
-        log.info("Request Path: {}", httpRequest.getServletPath());
+        log.info("Request Path: {}", httpRequest.getServletPath());*/
 
         // Allow specific origins: localhost and leadifynow.com
         if ("http://localhost:5173".equals(origin) || "https://leadifynow.com".equals(origin)) {
