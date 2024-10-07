@@ -47,7 +47,7 @@ public class Filtro implements Filter {
         // Handle preflight requests
         if (httpRequest.getMethod().equalsIgnoreCase("OPTIONS")) {
             httpResponse.setStatus(HttpServletResponse.SC_OK);
-            log.info("Handled preflight (OPTIONS) request from: {}", origin);
+            // log.info("Handled preflight (OPTIONS) request from: {}", origin);
             return;
         }
 

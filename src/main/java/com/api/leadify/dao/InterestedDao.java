@@ -136,17 +136,9 @@ public class InterestedDao {
                     return;
                 }
             } else {
-                // Retrieve the ID of the stage with the lowest position for the existing workspace
-                log.info("Retrieving the minimum position stage for workspace {}", workspaceId);
-                ResponseEntity<Integer> minPositionStageResponse = stageDao.getMinPositionStageId(workspaceId);
-                if (minPositionStageResponse.getStatusCode() == HttpStatus.OK) {
-                    Integer minPositionStageId = minPositionStageResponse.getBody();
-                    log.info("Minimum position stage ID: {}", minPositionStageId);
-                    interested.setStage_id(minPositionStageId);
-                } else {
-                    // Log error if retrieving the minimum position stage fails
-                    log.error("Error retrieving minimum position stage: {}", minPositionStageResponse);
-                }
+                // Workspace exists, but we do not assign a stage_id to the interested record
+                // Remove or comment out the code that assigns stage_id
+                log.info("Workspace exists. Not assigning stage_id to the interested record.");
             }
 
             // Check if the campaign exists
@@ -185,7 +177,7 @@ public class InterestedDao {
                     ps.setString(12, interested.getNumber_of_employees());
                     ps.setString(13, interested.getCompanyName());
                     ps.setString(14, interested.getLinkedin_url());
-                    ps.setObject(15, interested.getStage_id()); // Can be null if not set
+                    ps.setObject(15, interested.getStage_id()); // This will be null
                     ps.setInt(16, 0); // booked status initially set to 0
                     return ps;
                 }, keyHolder);
