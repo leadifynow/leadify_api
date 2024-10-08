@@ -823,11 +823,16 @@ public class BookedDao {
 
     public ResponseEntity<Booked> updateBooked(Booked booked) {
         try {
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
+            Date parsedDate = dateFormat.parse(booked.getMeeting_date());
+            Timestamp meetingTimestamp = new Timestamp(parsedDate.getTime());
+
             String sql = "update booked set email=?, meeting_date=?, publicist=?, name=?, business=?, website=? where id=?;";
             int affectedRows = jdbcTemplate.update(
                     sql,
                     booked.getEmail(),
-                    booked.getMeeting_date(),
+                    meetingTimestamp,
                     booked.getPublicist(),
                     booked.getName(),
                     booked.getBusiness(),
