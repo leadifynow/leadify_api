@@ -1,6 +1,7 @@
 package com.api.leadify.dao;
 
 import com.api.leadify.entity.Booked;
+import com.api.leadify.entity.EventName;
 import com.api.leadify.entity.Interested;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -851,4 +852,40 @@ public class BookedDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
+    public ResponseEntity<List<EventName>> getEventName(String workspaceId){
+        try {
+            String sql = "select * from event_names where workspace_id= ?";
+            List<EventName> eventData = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(EventName.class), workspaceId);
+            return ResponseEntity.ok(eventData);
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    public ResponseEntity<EventName>updateEventName(EventName event){
+        try {
+            String sql = "update event_names set name=?, workspace_id=? where id=?;";
+            int affectedRows = jdbcTemplate.update(
+                    sql,
+                    event.getName(),
+                    event.getWorkspace_id(),
+                    event.getId()
+            );
+
+            if (affectedRows > 0) {
+                String fetchNewUpdateQuery = "select * from event_names where id=?";
+                EventName updatedEvent = jdbcTemplate.queryForObject(fetchNewUpdateQuery, new BeanPropertyRowMapper<>(EventName.class), event.getId());
+                return ResponseEntity.ok(updatedEvent);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
 }

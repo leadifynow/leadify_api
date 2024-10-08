@@ -4,6 +4,7 @@ import com.api.leadify.dao.ApiResponse;
 import com.api.leadify.dao.BookedDao;
 import com.api.leadify.dao.PaginatedResponse;
 import com.api.leadify.entity.Booked;
+import com.api.leadify.entity.EventName;
 import com.api.leadify.entity.Interested;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -102,4 +103,15 @@ public class BookedController {
     public ResponseEntity<Booked> updateBooked(@RequestBody Booked booked) {
         return bookedDao.updateBooked(booked);
     }
+
+    @GetMapping("/getEventName/{workspaceId}")
+    public ResponseEntity<List<EventName>> getEventName(@PathVariable String workspaceId) {
+        return bookedDao.getEventName(workspaceId);
+    }
+
+    @PutMapping("/updateEventName")
+    public ResponseEntity<EventName> updateEventName(@RequestBody EventName event) {
+        return bookedDao.updateEventName(event);
+    }
+
 }
