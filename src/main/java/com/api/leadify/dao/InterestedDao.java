@@ -815,19 +815,12 @@ public class InterestedDao {
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.append("SELECT i.* ")
                     .append("FROM interested i ")
-                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
-                    .append("WHERE i.workspace = :workspace ")
-                    .append("AND i.manager IS NULL ")
-                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+                    .append("WHERE i.workspace = :workspace ");
 
             // Set query parameters
             MapSqlParameterSource params = new MapSqlParameterSource();
             params.addValue("workspace", workspaceId.toString());
 
-            List<String> excludedStageNames =
-                    Arrays.asList("Not a Fit", "Completed", "Phone Call", "Other");
-            sqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
-            params.addValue("excludedStageNames", excludedStageNames);
 
             //Add Search Parameter
             if (search != null && !search.trim().isEmpty()) {
@@ -861,12 +854,8 @@ public class InterestedDao {
             StringBuilder countSqlBuilder = new StringBuilder();
             countSqlBuilder.append("SELECT COUNT(*) ")
                     .append("FROM interested i ")
-                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
-                    .append("WHERE i.workspace = :workspace ")
-                    .append("AND i.manager IS NULL ")
-                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+                    .append("WHERE i.workspace = :workspace ");
 
-            countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
 
             if (search != null && !search.trim().isEmpty()) {
                 try {
