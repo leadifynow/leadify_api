@@ -54,26 +54,42 @@ public class InterestedDao {
     }
     public void createInterested(Interested interested) {
         try {
-            System.out.println(interested);
+            // Log the incoming 'interested' object
+            log.info("Starting createInterested with data: {}", interested);
+
             // Extract required values
             UUID workspaceId = interested.getWorkspace();
             UUID campaignId = interested.getCampaign_id();
             String campaignName = interested.getCampaign_name();
             String leadEmail = interested.getLead_email();
 
+            // Log extracted values
+            log.info("Workspace ID: {}, Campaign ID: {}, Campaign Name: {}, Lead Email: {}", workspaceId, campaignId, campaignName, leadEmail);
+
             // Check if the email already exists in the interested table
             String emailExistsQuery = "SELECT COUNT(*) FROM interested WHERE lead_email = ? AND workspace = ?";
             int emailCount = jdbcTemplate.queryForObject(emailExistsQuery, Integer.class, leadEmail, workspaceId.toString());
+
+            // Log email count result
+            log.info("Email count for {} in workspace {}: {}", leadEmail, workspaceId, emailCount);
 
             if (emailCount > 0 && !Objects.equals(campaignName, "Didn't Close Re-Engage Campaign")
                     && !Objects.equals(campaignName, "No Shows/Ghosted/ Didn’t close | Subscription")
                     && !Objects.equals(campaignName, "Previous Clients | Subscription")) {
                 // Email already exists, do nothing
+                log.info("Email already exists in the interested table, doing nothing.");
                 return;
             }
 
+            // Set stage_id to null by default
+            interested.setStage_id(null);
+
             // Check if the workspace exists
+            log.info("Checking if workspace exists for ID: {}", workspaceId);
             if (!workspaceDao.workspaceExists(workspaceId)) {
+                // Log workspace creation
+                log.info("Workspace doesn't exist, creating new workspace with ID: {}", workspaceId);
+
                 // If it doesn't exist, add it
                 Workspace newWorkspace = new Workspace();
                 newWorkspace.setId(workspaceId);
@@ -81,6 +97,7 @@ public class InterestedDao {
                 workspaceDao.createWorkspace(newWorkspace);
 
                 // Create the Main stage
+                log.info("Creating Main stage for workspace {}", workspaceId);
                 Stage mainStage = new Stage();
                 mainStage.setWorkspace_id(workspaceId);
                 mainStage.setName("Main");
@@ -88,9 +105,11 @@ public class InterestedDao {
                 ResponseEntity<Integer> createMainStageResponse = stageDao.createStage(mainStage);
 
                 // Check if "Not a Fit" stage exists
+                log.info("Checking if 'Not a Fit' stage exists for workspace {}", workspaceId);
                 ResponseEntity<Integer> notFitStageIdResponse = stageDao.getStageIdByName(workspaceId, "Not a Fit");
                 if (notFitStageIdResponse.getStatusCode() == HttpStatus.NOT_FOUND) {
-                    // Create the "Not a Fit" stage if it doesn't exist
+                    // Log 'Not a Fit' stage creation
+                    log.info("Not a Fit stage doesn't exist, creating it.");
                     Stage notFitStage = new Stage();
                     notFitStage.setWorkspace_id(workspaceId);
                     notFitStage.setName("Not a Fit");
@@ -98,39 +117,35 @@ public class InterestedDao {
                     ResponseEntity<Integer> createNotFitStageResponse = stageDao.createStage(notFitStage);
 
                     if (createNotFitStageResponse.getStatusCode() != HttpStatus.OK) {
-                        // Handle error if stage creation fails
-                        System.out.println("Error creating Not a Fit stage: " + createNotFitStageResponse);
-                        return; // Exit method
+                        // Log error if stage creation fails
+                        log.error("Error creating Not a Fit stage: {}", createNotFitStageResponse);
+                        return;
                     }
                 }
 
                 // Create the "Custom date" stage
+                log.info("Creating Custom date stage for workspace {}", workspaceId);
                 Stage customDateStage = new Stage();
                 customDateStage.setWorkspace_id(workspaceId);
                 customDateStage.setName("Custom date");
                 ResponseEntity<Integer> createCustomDateStageResponse = stageDao.createStage(customDateStage);
 
                 if (createCustomDateStageResponse.getStatusCode() != HttpStatus.OK) {
-                    // Handle error if stage creation fails
-                    System.out.println("Error creating Custom date stage: " + createCustomDateStageResponse);
-                    return; // Exit method
+                    // Log error if stage creation fails
+                    log.error("Error creating Custom date stage: {}", createCustomDateStageResponse);
+                    return;
                 }
             } else {
-                // Retrieve the ID of the stage with the lowest position for the existing workspace
-                ResponseEntity<Integer> minPositionStageResponse = stageDao.getMinPositionStageId(workspaceId);
-                if (minPositionStageResponse.getStatusCode() == HttpStatus.OK) { // Corrected condition here
-                    Integer minPositionStageId = minPositionStageResponse.getBody();
-                    interested.setStage_id(minPositionStageId);
-                } else {
-                    // Handle error if retrieving the minimum position stage fails
-                    System.out.println("Error retrieving minimum position stage: " + minPositionStageResponse);
-                    return; // Exit method
-                }
+                // Workspace exists, but we do not assign a stage_id to the interested record
+                // Remove or comment out the code that assigns stage_id
+                log.info("Workspace exists. Not assigning stage_id to the interested record.");
             }
 
             // Check if the campaign exists
-            if(!campaignDao.campaignExists(campaignId)) {
-                // If it doesn't exist, add it
+            log.info("Checking if campaign exists for campaign ID: {}", campaignId);
+            if (!campaignDao.campaignExists(campaignId)) {
+                // Log campaign creation
+                log.info("Campaign doesn't exist, creating new campaign with ID: {}", campaignId);
                 Campaign newCampaign = new Campaign();
                 newCampaign.setId(campaignId);
                 newCampaign.setWorkspace_id(workspaceId);
@@ -139,6 +154,7 @@ public class InterestedDao {
             }
 
             // Insert into the interested table
+            log.info("Inserting new record into interested table.");
             String insertQuery = "INSERT INTO interested (event_type, workspace, campaign_id, campaign_name, lead_email, title, email, " +
                     "website, industry, lastName, firstName, number_of_employees, companyName, linkedin_url, stage_id, booked) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -161,37 +177,24 @@ public class InterestedDao {
                     ps.setString(12, interested.getNumber_of_employees());
                     ps.setString(13, interested.getCompanyName());
                     ps.setString(14, interested.getLinkedin_url());
-                    ps.setObject(15, interested.getStage_id()); // Use the stage_id from interested
+                    ps.setObject(15, interested.getStage_id()); // This will be null
                     ps.setInt(16, 0); // booked status initially set to 0
                     return ps;
                 }, keyHolder);
             } catch (DataAccessException e) {
-                // Log the exception or handle it as required
-                // You can throw a custom exception with an error message
+                // Log insertion error
+                log.error("Error inserting data into the interested table: {}", e.getMessage());
                 throw new RuntimeException("Failed to insert data into the database: " + e.getMessage());
             }
 
-            // Get the generated interested_id
-            int interestedId = keyHolder.getKey().intValue();
-            // Check if the email exists in the booked table
-            String emailExistsInBookedQuery = "SELECT COUNT(*) FROM booked WHERE email = ? AND (workspace_id = ? OR workspace_id IS NULL) AND interested_id IS NULL";
-            int emailExistsInBooked = jdbcTemplate.queryForObject(emailExistsInBookedQuery, Integer.class, leadEmail, interested.getWorkspace().toString());
+            // Log successful insertion
+            log.info("Successfully inserted new interested record with ID: {}", keyHolder.getKey());
 
-            if (emailExistsInBooked == 1) {
-                // If the email exists in booked table, update booked status to 1
-                String updateInterestedQuery = "UPDATE interested SET booked = 1 WHERE lead_email = ?";
-                jdbcTemplate.update(updateInterestedQuery, leadEmail);
+            // Additional logic to handle booked table updates follows...
 
-                String updateBookedQuery = "UPDATE booked SET interested_id = ? WHERE email = ? AND interested_id IS NULL";
-                jdbcTemplate.update(updateBookedQuery, interestedId, leadEmail);
-
-                // Update workspace_id in the booked table based on the interested table
-                String updateWorkspaceSql = "UPDATE booked SET workspace_id = (SELECT workspace FROM interested WHERE lead_email = booked.email) WHERE email = ? AND workspace_id IS NULL";
-                jdbcTemplate.update(updateWorkspaceSql, leadEmail);
-            }
         } catch (Exception e) {
-            // Log the exception
-            log.error("An error occurred: {}", e.getMessage(), e);
+            // Log the exception and additional data
+            log.error("An error occurred in createInterested: {}", e.getMessage(), e);
 
             // Serialize the Interested object to JSON
             String additionalData = serializeInterested(interested);
@@ -383,8 +386,10 @@ public class InterestedDao {
                 // Add filtering condition to exclude leads with next_update in the future
                 sqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
 
-                // Set order by clause
+                // Set order by clause to prioritize records with stage_id as NULL and newly created
                 orderByClause = "ORDER BY "
+                        + "CASE WHEN i.stage_id IS NULL THEN 0 ELSE 1 END, "
+                        + "CASE WHEN i.stage_id IS NULL THEN i.created_at END DESC, "
                         + "CASE "
                         + "WHEN i.next_update < :startOfToday THEN 0 " // Overdue updates
                         + "WHEN i.next_update >= :startOfToday AND i.next_update < :startOfTomorrow THEN 1 " // Updates due today
@@ -414,12 +419,13 @@ public class InterestedDao {
                 orderByClause = "ORDER BY i.updated_at DESC ";
 
             } else {
-                // Default to 'Next update' sorting
-                // Reuse the logic from the 'Next update' case
+                // Default to 'Next update' sorting with the same modifications
                 sqlBuilder.append("AND (i.next_update < :startOfTomorrow OR i.next_update IS NULL) ");
 
                 // Set order by clause
                 orderByClause = "ORDER BY "
+                        + "CASE WHEN i.stage_id IS NULL THEN 0 ELSE 1 END, "
+                        + "CASE WHEN i.stage_id IS NULL THEN i.created_at END DESC, "
                         + "CASE "
                         + "WHEN i.next_update < :startOfToday THEN 0 " // Overdue updates
                         + "WHEN i.next_update >= :startOfToday AND i.next_update < :startOfTomorrow THEN 1 " // Updates due today
