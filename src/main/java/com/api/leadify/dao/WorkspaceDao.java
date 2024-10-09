@@ -81,11 +81,9 @@ public class WorkspaceDao {
             // Default query for retrieving all companies and workspaces if no filters are applied
             String finalSql;
             if ((ClientName == null || ClientName.isEmpty()) && (orderBy == null || orderBy == 0)) {
-                finalSql = "SELECT w.*, u.email AS users, c.name AS client " +
-                        "FROM workspace w " +
-                        "JOIN workspace_user wu ON w.id = wu.workspace_id " +
-                        "JOIN user u ON wu.user_id = u.id " +
-                        "JOIN company c ON w.company_id = c.id ";
+                finalSql = "SELECT w.*, c.name AS client \n" + //
+                                        "FROM workspace w \n" + //
+                                        "JOIN company c ON w.company_id = c.id; ";
             } else {
                 finalSql = sql.toString();
             }
