@@ -71,43 +71,16 @@ public class BookedDao {
 
             UUID workspaceId = null;
             String sql;
-            switch (event_name) {
-                case "Mindful Agency - Strategy Consultation":
-                    workspaceId = fetchWorkspaceId("Mindful Agency - Lauren");
-                    break;
-                case "Mindful Agency - Strategy PR Consultation":
-                case "Mindful Agency - Connect":
-                    workspaceId = fetchWorkspaceId("Mindful Agency - Natalie");
-                    break;
-                case "MediaBlitz - Discovery Call":
-                    workspaceId = fetchWorkspaceId("Media Blitz - Michael");
-                    break;
-                case "Mindful Agency - Initial Consultation":
-                    workspaceId = fetchWorkspaceId("Mindful Agency - Instagram");
-                    break;
-                case "Leadify - Discovery Call":
-                    workspaceId = fetchWorkspaceId("Leadify - Chelsea");
-                    break;
-                case "Priority 1 Meeting":
-                    workspaceId = fetchWorkspaceId("Royal Logistics - Vincent/Rachel");
-                    break;
-                case "Whizzbang Media - Discovery Call":
-                    workspaceId = fetchWorkspaceId("Whizzbang Media - Olivia");
-                    break;
-                case "Mindful Agency - Initial PR Consultation":
-                    workspaceId = fetchWorkspaceId("Mindful Agency - LinkedIn");
-                    break;
-                case "Mindful Agency - Discovery Call":
-                case "Mindful Agency - Follow-Up Call":
-                case "Mindful Agency - Lead Generation Consultation":
-                case "Leadify - Consultation Call":
-                    workspaceId = null;
-                    log.info("No workspace needed for event '{}'", event_name);
-                    break;
-                default:
-                    log.warn("Invalid event name: {}", event_name);
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                            .body(new ApiResponse<>("Invalid event name", null, 400));
+            try {
+                String queryString = "select * from event_names where name= ?";
+                EventName eventData = jdbcTemplate.queryForObject(queryString, new BeanPropertyRowMapper<>(EventName.class), event_name);
+                if(eventData.getWorkspace_id()!=null && !eventData.getWorkspace_id().isEmpty()){
+                workspaceId=UUID.fromString(eventData.getWorkspace_id());
+                }
+            } catch (EmptyResultDataAccessException e) {
+                log.warn("Invalid event name: {}", event_name);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>("Invalid event name", null, 400));
             }
 
             // Check if the email exists in the interested table
@@ -887,5 +860,6 @@ public class BookedDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
 
 }
