@@ -892,5 +892,29 @@ public class InterestedDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+    public ResponseEntity<Interested> updateInterested(Interested interested){
+        try {
+            String sql="update interested set email=?, firstName=?, lastName=?, companyName=?, notes=? where id=?;";
+            int affectedRows= jdbcTemplate.update(
+                sql,
+                interested.getEmail(),
+                interested.getFirstName(),
+                interested.getLastName(),
+                interested.getCompanyName(),
+                interested.getNotes(),
+                interested.getId());
+            if(affectedRows>0){
+                String fetchUpdateInterestedsql="select * from interested where id=?";
+                Interested updateInterested=jdbcTemplate.queryForObject(fetchUpdateInterestedsql,new BeanPropertyRowMapper<>(Interested.class), interested.getId());
+                return ResponseEntity.ok(updateInterested);
+            }else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
 
 }
