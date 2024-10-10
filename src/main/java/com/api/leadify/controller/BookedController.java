@@ -114,4 +114,15 @@ public class BookedController {
         return bookedDao.updateEventName(event);
     }
 
+    @PostMapping("/createEventName")
+    public ResponseEntity<EventName> createEventName(@RequestBody EventName event) {
+        return bookedDao.createEventName(event);
+    }
+
+    @DeleteMapping("/deleteEventName/{eventId}")
+    public ResponseEntity<String> deleteEventName(@PathVariable Integer eventId) {
+        return bookedDao.deleteEventName(eventId);
+    }
+ 
+
 }

@@ -861,5 +861,42 @@ public class BookedDao {
         }
     }
 
+    public ResponseEntity<EventName>createEventName(EventName event){
+        try {
+            String sql = "insert into event_names (name, workspace_id) values(?,?);";
+            int insertedRows = jdbcTemplate.update(
+            sql,
+            event.getName(),
+            event.getWorkspace_id()
+            );
+            if (insertedRows > 0) {
+                String getEventIdQuery = "SELECT LAST_INSERT_ID()";
+                int EventId = jdbcTemplate.queryForObject(getEventIdQuery, Integer.class);
+                String fetchNewUpdateQuery = "select * from event_names where id=?";
+                EventName updatedEvent = jdbcTemplate.queryForObject(fetchNewUpdateQuery, new BeanPropertyRowMapper<>(EventName.class), EventId);
+                return ResponseEntity.ok(updatedEvent);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
 
+
+
+    public ResponseEntity<String> deleteEventName(Integer id) {
+        try {
+            String sql = "DELETE FROM event_names WHERE id = ?";
+            int rowsAffected = jdbcTemplate.update(sql, id);
+            if (rowsAffected > 0) {
+                return ResponseEntity.ok("Event deleted successfully");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No event found with the given ID");
+            }
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
 }
