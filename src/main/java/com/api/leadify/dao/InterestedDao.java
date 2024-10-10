@@ -527,7 +527,7 @@ public class InterestedDao {
             return -1; // Return -1 in case of exception
         }
     }
-    public ResponseEntity<String> updateStage2(Integer interestedId, Integer stageId) {
+    public ResponseEntity<Interested> updateStage2(Integer interestedId, Integer stageId) {
         try {
             String sql = "UPDATE interested SET stage_id = ? WHERE id = ?";
             int affectedRows = jdbcTemplate.update(sql, stageId, interestedId);
@@ -553,13 +553,14 @@ public class InterestedDao {
                     String updateNextUpdateSql = "UPDATE interested SET next_update = ? WHERE id = ?";
                     jdbcTemplate.update(updateNextUpdateSql, Timestamp.valueOf(nextUpdate), interestedId);
                 }
-
-                return new ResponseEntity<>("Stage updated successfully", null, 200);
+                String InterestedSql = "SELECT * FROM interested WHERE id = ?";
+                Interested resp = jdbcTemplate.queryForObject(InterestedSql, new BeanPropertyRowMapper<>(Interested.class), interestedId);
+                return ResponseEntity.ok(resp);
             } else {
-                return new ResponseEntity<>("No interested item found with the given ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>("Error updating stage for interested item", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
     public ResponseEntity<List<Interested>> updateStageArray(JsonNode stageUpdates) {
@@ -672,18 +673,20 @@ public class InterestedDao {
             //return new ApiResponse<>(errorMessage, null, 500);
         }
     }
-    public ResponseEntity<String> updateNextUpdateDate(Integer interestedId, LocalDate nextUpdateDate) {
+    public ResponseEntity<Interested> updateNextUpdateDate(Integer stageId, Integer interestedId, LocalDate nextUpdateDate) {
         try {
-            String sql = "UPDATE interested SET next_update = ? WHERE id = ?";
-            int affectedRows = jdbcTemplate.update(sql, nextUpdateDate, interestedId);
+            String sql = "UPDATE interested SET stage_id=?, next_update = ? WHERE id = ?";
+            int affectedRows = jdbcTemplate.update(sql, stageId, nextUpdateDate, interestedId);
 
             if (affectedRows > 0) {
-                return new ResponseEntity<>("Next update date updated successfully", null, 200);
+                String fetchUpdateInterestedsql="select * from interested where id=?";
+                Interested updateInterested=jdbcTemplate.queryForObject(fetchUpdateInterestedsql,new BeanPropertyRowMapper<>(Interested.class), interestedId);
+                return ResponseEntity.ok(updateInterested);
             } else {
-                return new ResponseEntity<>("No interested item found with the given ID", null, 404);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>("Error updating next update date for interested item", null, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
     public ResponseEntity<Interested> createManualInterested(Interested interested) {

@@ -65,7 +65,7 @@ public class InterestedController {
     }
 
     @PutMapping("/updateStage/{interestedId}/{stageId}")
-    public ResponseEntity<String> updateStage2(@PathVariable Integer interestedId, @PathVariable Integer stageId) {
+    public ResponseEntity<Interested> updateStage2(@PathVariable Integer interestedId, @PathVariable Integer stageId) {
         return interestedDao.updateStage2(interestedId, stageId);
     }
     @PutMapping("/updateManager/{interestedId}/{managerId}")
@@ -80,11 +80,13 @@ public class InterestedController {
     public ResponseEntity<List<Interested>> searchInterestedRecords(@RequestParam String searchTerm, @RequestParam UUID workspaceId) {
         return interestedDao.searchInterestedRecords(searchTerm, workspaceId);
     }
-    @PutMapping("/date/{interestedId}/{nextUpdateDate}")
-    public ResponseEntity<String> updateNextUpdateDate(
+    @PutMapping("/date/{stageId}/{interestedId}/{nextUpdateDate}")
+    public ResponseEntity<Interested> updateNextUpdateDate(
+            @PathVariable Integer stageId,
             @PathVariable Integer interestedId,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate nextUpdateDate) {
-        return interestedDao.updateNextUpdateDate(interestedId, nextUpdateDate);
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate nextUpdateDate)
+    {
+        return interestedDao.updateNextUpdateDate(stageId,interestedId, nextUpdateDate);
     }
     @PostMapping("/createManual")
     public ResponseEntity<Interested> createManualInterested(@RequestBody Interested interested) {
