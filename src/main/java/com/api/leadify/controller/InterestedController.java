@@ -112,4 +112,9 @@ public class InterestedController {
     public ResponseEntity<String> updateStageAndNextUpdateArray(@RequestBody JsonNode stageUpdates) {
         return interestedDao.updateStageAndNextUpdateArray(stageUpdates);
     }
+
+    @PutMapping("/updateInterested")
+    public ResponseEntity<Interested> updateInterested(@RequestBody Interested interested) {
+        return interestedDao.updateInterested(interested);
+    }
 }

@@ -1,6 +1,7 @@
 package com.api.leadify.dao;
 
 import com.api.leadify.entity.Booked;
+import com.api.leadify.entity.EventName;
 import com.api.leadify.entity.Interested;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -70,43 +71,16 @@ public class BookedDao {
 
             UUID workspaceId = null;
             String sql;
-            switch (event_name) {
-                case "Mindful Agency - Strategy Consultation":
-                    workspaceId = fetchWorkspaceId("Mindful Agency - Lauren");
-                    break;
-                case "Mindful Agency - Strategy PR Consultation":
-                case "Mindful Agency - Connect":
-                    workspaceId = fetchWorkspaceId("Mindful Agency - Natalie");
-                    break;
-                case "MediaBlitz - Discovery Call":
-                    workspaceId = fetchWorkspaceId("Media Blitz - Michael");
-                    break;
-                case "Mindful Agency - Initial Consultation":
-                    workspaceId = fetchWorkspaceId("Mindful Agency - Instagram");
-                    break;
-                case "Leadify - Discovery Call":
-                    workspaceId = fetchWorkspaceId("Leadify - Chelsea");
-                    break;
-                case "Priority 1 Meeting":
-                    workspaceId = fetchWorkspaceId("Royal Logistics - Vincent/Rachel");
-                    break;
-                case "Whizzbang Media - Discovery Call":
-                    workspaceId = fetchWorkspaceId("Whizzbang Media - Olivia");
-                    break;
-                case "Mindful Agency - Initial PR Consultation":
-                    workspaceId = fetchWorkspaceId("Mindful Agency - LinkedIn");
-                    break;
-                case "Mindful Agency - Discovery Call":
-                case "Mindful Agency - Follow-Up Call":
-                case "Mindful Agency - Lead Generation Consultation":
-                case "Leadify - Consultation Call":
-                    workspaceId = null;
-                    log.info("No workspace needed for event '{}'", event_name);
-                    break;
-                default:
-                    log.warn("Invalid event name: {}", event_name);
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                            .body(new ApiResponse<>("Invalid event name", null, 400));
+            try {
+                String queryString = "select * from event_names where name= ?";
+                EventName eventData = jdbcTemplate.queryForObject(queryString, new BeanPropertyRowMapper<>(EventName.class), event_name);
+                if(eventData.getWorkspace_id()!=null && !eventData.getWorkspace_id().isEmpty()){
+                workspaceId=UUID.fromString(eventData.getWorkspace_id());
+                }
+            } catch (EmptyResultDataAccessException e) {
+                log.warn("Invalid event name: {}", event_name);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>("Invalid event name", null, 400));
             }
 
             // Check if the email exists in the interested table
@@ -823,11 +797,16 @@ public class BookedDao {
 
     public ResponseEntity<Booked> updateBooked(Booked booked) {
         try {
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH);
+            Date parsedDate = dateFormat.parse(booked.getMeeting_date());
+            Timestamp meetingTimestamp = new Timestamp(parsedDate.getTime());
+
             String sql = "update booked set email=?, meeting_date=?, publicist=?, name=?, business=?, website=? where id=?;";
             int affectedRows = jdbcTemplate.update(
                     sql,
                     booked.getEmail(),
-                    booked.getMeeting_date(),
+                    meetingTimestamp,
                     booked.getPublicist(),
                     booked.getName(),
                     booked.getBusiness(),
@@ -846,4 +825,41 @@ public class BookedDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
+    public ResponseEntity<List<EventName>> getEventName(String workspaceId){
+        try {
+            String sql = "select * from event_names where workspace_id= ?";
+            List<EventName> eventData = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(EventName.class), workspaceId);
+            return ResponseEntity.ok(eventData);
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    public ResponseEntity<EventName>updateEventName(EventName event){
+        try {
+            String sql = "update event_names set name=?, workspace_id=? where id=?;";
+            int affectedRows = jdbcTemplate.update(
+                    sql,
+                    event.getName(),
+                    event.getWorkspace_id(),
+                    event.getId()
+            );
+
+            if (affectedRows > 0) {
+                String fetchNewUpdateQuery = "select * from event_names where id=?";
+                EventName updatedEvent = jdbcTemplate.queryForObject(fetchNewUpdateQuery, new BeanPropertyRowMapper<>(EventName.class), event.getId());
+                return ResponseEntity.ok(updatedEvent);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+
 }

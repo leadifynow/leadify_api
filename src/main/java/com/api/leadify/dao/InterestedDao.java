@@ -821,19 +821,12 @@ public class InterestedDao {
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.append("SELECT i.* ")
                     .append("FROM interested i ")
-                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
-                    .append("WHERE i.workspace = :workspace ")
-                    .append("AND i.manager IS NULL ")
-                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+                    .append("WHERE i.workspace = :workspace ");
 
             // Set query parameters
             MapSqlParameterSource params = new MapSqlParameterSource();
             params.addValue("workspace", workspaceId.toString());
 
-            List<String> excludedStageNames =
-                    Arrays.asList("Not a Fit", "Completed", "Phone Call", "Other");
-            sqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
-            params.addValue("excludedStageNames", excludedStageNames);
 
             //Add Search Parameter
             if (search != null && !search.trim().isEmpty()) {
@@ -867,12 +860,8 @@ public class InterestedDao {
             StringBuilder countSqlBuilder = new StringBuilder();
             countSqlBuilder.append("SELECT COUNT(*) ")
                     .append("FROM interested i ")
-                    .append("LEFT JOIN stage s ON i.stage_id = s.id ")
-                    .append("WHERE i.workspace = :workspace ")
-                    .append("AND i.manager IS NULL ")
-                    .append("AND (i.stage_id IS NULL OR i.next_update <= CURDATE()) ");
+                    .append("WHERE i.workspace = :workspace ");
 
-            countSqlBuilder.append("AND (s.name IS NULL OR s.name NOT IN (:excludedStageNames)) ");
 
             if (search != null && !search.trim().isEmpty()) {
                 try {
@@ -903,5 +892,29 @@ public class InterestedDao {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+    public ResponseEntity<Interested> updateInterested(Interested interested){
+        try {
+            String sql="update interested set email=?, firstName=?, lastName=?, companyName=?, notes=? where id=?;";
+            int affectedRows= jdbcTemplate.update(
+                sql,
+                interested.getEmail(),
+                interested.getFirstName(),
+                interested.getLastName(),
+                interested.getCompanyName(),
+                interested.getNotes(),
+                interested.getId());
+            if(affectedRows>0){
+                String fetchUpdateInterestedsql="select * from interested where id=?";
+                Interested updateInterested=jdbcTemplate.queryForObject(fetchUpdateInterestedsql,new BeanPropertyRowMapper<>(Interested.class), interested.getId());
+                return ResponseEntity.ok(updateInterested);
+            }else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
 
 }
